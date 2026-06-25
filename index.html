@@ -699,14 +699,18 @@
         // ============================================================
         // 1. PEAD DATA FETCHER (Dynamic from GitHub)
         // ============================================================
-        const PEAD_CONFIG = {
-            // IMPORTANT: Update these with your actual GitHub username and repo name
-            USERNAME: 'SPRZonesBot',           // <-- CHANGE THIS
-            REPO: 'pead-earnings-agent',       // <-- CHANGE THIS IF DIFFERENT
-            get RAW_URL() {
-                return `https://raw.githubusercontent.com/${this.USERNAME}/${this.REPO}/main/`;
-            }
-        };
+// ============================================================
+// 1. PEAD DATA FETCHER (Dynamic from GitHub)
+// ============================================================
+
+// --- CONFIGURATION (UPDATE THESE 2 LINES) ---
+const PEAD_CONFIG = {
+    USERNAME: 'SPRZonesBot',           // <-- YAHAN APNA USERNAME DAALEIN
+    REPO: 'pead-earnings-agent',       // <-- YAHAN APNA REPO NAME DAALEIN
+    get RAW_URL() {
+        return `https://raw.githubusercontent.com/${this.USERNAME}/${this.REPO}/main/`;
+    }
+};
         const PEAD_LOGS_URL = PEAD_CONFIG.RAW_URL + 'logs.txt';
 
         // Cache keys
