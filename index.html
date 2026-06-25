@@ -178,15 +178,9 @@
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
-            0% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.3;
-            }
-            100% {
-                opacity: 1;
-            }
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
         }
 
         /* ---------- RECOMMENDATION CARD ---------- */
@@ -241,6 +235,75 @@
         }
         .screener-item .score.yellow {
             color: #ffc107;
+        }
+
+        /* ---------- PEAD SPECIFIC ---------- */
+        .pead-loading {
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+            font-size: 13px;
+        }
+        .pead-error {
+            color: #ff6b6b;
+            padding: 12px;
+            border: 1px solid #ff6b6b;
+            border-radius: 4px;
+            background: rgba(255, 107, 107, 0.1);
+            font-size: 13px;
+            display: none;
+        }
+        .pead-table-wrap {
+            overflow-x: auto;
+        }
+        .pead-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .pead-table th {
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 2px solid #1e2a3a;
+            color: #8b95a9;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+        .pead-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1a1f2e;
+        }
+        .pead-table tr:last-child td {
+            border-bottom: none;
+        }
+        .pead-table tr:nth-child(even) {
+            background: #0b111c;
+        }
+        .pead-action-buy {
+            background: rgba(0, 200, 151, 0.2);
+            color: #00c897;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 11px;
+        }
+        .pead-action-watch {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 11px;
+        }
+        .pead-action-avoid {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 11px;
         }
 
         /* ---------- ALERT BOT ---------- */
@@ -478,10 +541,11 @@
         <span class="badge">📊 <span style="color:#f0b90b;">95%+</span> Accuracy</span>
         <span class="badge">📈 <span style="color:#00c897;">20</span> Total Analyses</span>
         <span class="badge">🏆 <span style="color:#ffc107;">93.9%</span> Success Rate</span>
+        <span class="badge">📊 <span style="color:#f0b90b;">PEAD</span> <span id="peadStatusIndicator" style="color:#00c897;">● Live</span></span>
     </div>
 
     <!-- ============================================================
-    MAIN GRID — 4 WIDGETS
+    MAIN GRID — 4 WIDGETS (PEAD replaced the old one)
     ============================================================ -->
     <div class="dashboard-grid">
 
@@ -499,18 +563,44 @@
             </div>
         </div>
 
-        <!-- ---- WIDGET 2: PEAD SCREENER ---- -->
+        <!-- ---- WIDGET 2: PEAD SCREENER (DYNAMIC) ---- -->
         <div class="widget">
             <div class="widget-header">
                 <span><i class="fas fa-chart-bar"></i> PEAD Screener</span>
-                <span class="tag">Earnings</span>
+                <span class="tag" id="peadTag">Loading...</span>
             </div>
             <div id="peadContainer">
-                <div class="screener-item"><span class="name">RELIANCE</span><span class="score green">+8.2%</span></div>
-                <div class="screener-item"><span class="name">TCS</span><span class="score green">+5.6%</span></div>
-                <div class="screener-item"><span class="name">HDFC BANK</span><span class="score yellow">-1.3%</span></div>
-                <div class="screener-item"><span class="name">INFY</span><span class="score red">-3.8%</span></div>
-                <div class="screener-item"><span class="name">ICICI BANK</span><span class="score green">+4.1%</span></div>
+                <!-- Loading State -->
+                <div id="peadLoading" class="pead-loading">
+                    <i class="fas fa-spinner fa-spin"></i> Fetching PEAD data...
+                </div>
+                <!-- Error State -->
+                <div id="peadError" class="pead-error">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="peadErrorMsg"></span>
+                </div>
+                <!-- Results -->
+                <div id="peadResults" style="display:none;">
+                    <div class="pead-table-wrap">
+                        <table class="pead-table" id="peadTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Stock</th>
+                                    <th>Score</th>
+                                    <th>Action</th>
+                                    <th>Rev Growth</th>
+                                    <th>PAT Growth</th>
+                                    <th>CMP (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="peadTbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="font-size:11px;color:#4a5568;margin-top:6px;" id="peadSummary">
+                        <span id="peadTimestamp"></span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -607,7 +697,275 @@
     ============================================================ -->
     <script>
         // ============================================================
-        // 1. TICKER DATA — NSE (India) + US Stocks
+        // 1. PEAD DATA FETCHER (Dynamic from GitHub)
+        // ============================================================
+        const PEAD_CONFIG = {
+            // IMPORTANT: Update these with your actual GitHub username and repo name
+            USERNAME: 'SPRZonesBot',           // <-- CHANGE THIS
+            REPO: 'pead-earnings-agent',       // <-- CHANGE THIS IF DIFFERENT
+            get RAW_URL() {
+                return `https://raw.githubusercontent.com/${this.USERNAME}/${this.REPO}/main/`;
+            }
+        };
+        const PEAD_LOGS_URL = PEAD_CONFIG.RAW_URL + 'logs.txt';
+
+        // Cache keys
+        const PEAD_CACHE_KEY = 'pead_cache_data';
+        const PEAD_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
+        async function fetchPEADData() {
+            const container = document.getElementById('peadContainer');
+            const loading = document.getElementById('peadLoading');
+            const errorDiv = document.getElementById('peadError');
+            const results = document.getElementById('peadResults');
+            const tbody = document.getElementById('peadTbody');
+            const timestampSpan = document.getElementById('peadTimestamp');
+            const tagSpan = document.getElementById('peadTag');
+            const statusIndicator = document.getElementById('peadStatusIndicator');
+
+            // Show loading
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
+            results.style.display = 'none';
+            tagSpan.textContent = 'Loading...';
+            tagSpan.style.color = '#ffc107';
+            if (statusIndicator) {
+                statusIndicator.textContent = '● Loading';
+                statusIndicator.style.color = '#ffc107';
+            }
+
+            try {
+                // Check cache first
+                const cached = getCachedPEAD();
+                if (cached) {
+                    renderPEADTable(cached.picks);
+                    timestampSpan.textContent = `Last updated: ${cached.timestamp}`;
+                    tagSpan.textContent = 'Cached';
+                    tagSpan.style.color = '#00c897';
+                    loading.style.display = 'none';
+                    results.style.display = 'block';
+                    if (statusIndicator) {
+                        statusIndicator.textContent = '● Cached';
+                        statusIndicator.style.color = '#00c897';
+                    }
+                    return;
+                }
+
+                // Fetch from GitHub
+                const response = await fetch(PEAD_LOGS_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const logText = await response.text();
+
+                // Parse logs
+                const picks = parsePEADLog(logText);
+
+                if (picks.length === 0) {
+                    throw new Error('No PEAD picks found in the latest logs.');
+                }
+
+                // Render
+                renderPEADTable(picks);
+                const now = new Date();
+                const timestamp = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+                timestampSpan.textContent = `Last updated: ${timestamp}`;
+                tagSpan.textContent = 'Live';
+                tagSpan.style.color = '#00c897';
+                loading.style.display = 'none';
+                results.style.display = 'block';
+                if (statusIndicator) {
+                    statusIndicator.textContent = '● Live';
+                    statusIndicator.style.color = '#00c897';
+                }
+
+                // Cache data
+                setCachedPEAD(picks, timestamp);
+
+            } catch (error) {
+                console.error('PEAD fetch error:', error);
+                loading.style.display = 'none';
+                errorDiv.style.display = 'block';
+                document.getElementById('peadErrorMsg').textContent = error.message;
+                tagSpan.textContent = 'Error';
+                tagSpan.style.color = '#ff6b6b';
+                if (statusIndicator) {
+                    statusIndicator.textContent = '● Error';
+                    statusIndicator.style.color = '#ff6b6b';
+                }
+            }
+        }
+
+        // --- Parse PEAD log ---
+        function parsePEADLog(logText) {
+            const lines = logText.split('\n');
+            const picks = [];
+            let foundTop = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                // Look for the TOP picks header
+                if (line.includes('TOP') && line.includes('PICKS')) {
+                    foundTop = true;
+                    continue;
+                }
+
+                // Parse numbered entries
+                if (foundTop && line.match(/^\d+\./)) {
+                    const pick = parsePickLine(line);
+                    if (pick) {
+                        picks.push(pick);
+                        if (picks.length >= 10) break;
+                    }
+                }
+            }
+
+            // If we didn't find any picks, try fallback
+            if (picks.length === 0) {
+                // Look for ANY stock data in the log
+                const stockLines = lines.filter(line =>
+                    line.includes('BUY') || line.includes('WATCH') || line.includes('AVOID')
+                );
+                for (const line of stockLines) {
+                    const pick = parsePickLine(line);
+                    if (pick) {
+                        picks.push(pick);
+                        if (picks.length >= 10) break;
+                    }
+                }
+            }
+
+            return picks;
+        }
+
+        // --- Parse a single pick line ---
+        function parsePickLine(line) {
+            try {
+                let clean = line.replace(/\*/g, '');
+
+                // Extract number
+                const numMatch = clean.match(/^(\d+)\./);
+                if (!numMatch) return null;
+
+                // Extract company and symbol
+                let company = '';
+                let symbol = '';
+                const nameSymbolMatch = clean.match(/^\d+\.\s*(.+?)\s*\(([^)]+)\)/);
+                if (nameSymbolMatch) {
+                    company = nameSymbolMatch[1].trim();
+                    symbol = nameSymbolMatch[2].trim();
+                } else {
+                    const symbolMatch = clean.match(/^\d+\.\s*([A-Z]+)/);
+                    if (symbolMatch) {
+                        symbol = symbolMatch[1];
+                        company = symbol;
+                    } else {
+                        return null;
+                    }
+                }
+
+                // Extract Score
+                const scoreMatch = clean.match(/Score:\s*([\d.]+)/);
+                const score = scoreMatch ? scoreMatch[1] : 'N/A';
+
+                // Extract Action
+                const actionMatch = clean.match(/BUY|WATCH|AVOID/);
+                const action = actionMatch ? actionMatch[0] : 'N/A';
+
+                // Extract Revenue Growth
+                const revMatch = clean.match(/Rev\s*Growth:\s*([\d.]+)/);
+                const revGrowth = revMatch ? revMatch[1] : 'N/A';
+
+                // Extract PAT Growth
+                const patMatch = clean.match(/PAT\s*Growth:\s*([\d.]+)/);
+                const patGrowth = patMatch ? patMatch[1] : 'N/A';
+
+                // Extract CMP
+                const cmpMatch = clean.match(/CMP:\s*₹?([\d,]+\.?[\d]*)/);
+                const cmp = cmpMatch ? cmpMatch[1].replace(/,/g, '') : 'N/A';
+
+                return { number: numMatch[1], company, symbol, score, action, revGrowth, patGrowth, cmp };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // --- Render PEAD table ---
+        function renderPEADTable(picks) {
+            const tbody = document.getElementById('peadTbody');
+            if (!tbody) return;
+
+            if (picks.length === 0) {
+                tbody.innerHTML =
+                    `<tr><td colspan="7" style="text-align:center;padding:20px;color:#4a5568;">No PEAD picks available.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            picks.forEach((pick) => {
+                const actionClass = pick.action === 'BUY' ? 'pead-action-buy' :
+                    pick.action === 'WATCH' ? 'pead-action-watch' :
+                    'pead-action-avoid';
+                html += `<tr>
+                            <td>${pick.number || '-'}</td>
+                            <td><strong>${pick.company}</strong> (${pick.symbol})</td>
+                            <td style="font-weight:700;">${pick.score}</td>
+                            <td><span class="${actionClass}">${pick.action}</span></td>
+                            <td>${pick.revGrowth}%</td>
+                            <td>${pick.patGrowth}%</td>
+                            <td>${pick.cmp !== 'N/A' ? '₹' + pick.cmp : 'N/A'}</td>
+                        </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // --- Cache Management ---
+        function getCachedPEAD() {
+            try {
+                const cached = localStorage.getItem(PEAD_CACHE_KEY);
+                if (!cached) return null;
+                const data = JSON.parse(cached);
+                const now = new Date().getTime();
+                if (now - data.timestampMs > PEAD_CACHE_EXPIRY) {
+                    localStorage.removeItem(PEAD_CACHE_KEY);
+                    return null;
+                }
+                return { picks: data.picks, timestamp: data.timestamp };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setCachedPEAD(picks, timestamp) {
+            try {
+                const data = {
+                    picks: picks,
+                    timestamp: timestamp,
+                    timestampMs: new Date().getTime()
+                };
+                localStorage.setItem(PEAD_CACHE_KEY, JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        // --- Auto-load on page load ---
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch PEAD after 1.5 seconds
+            setTimeout(fetchPEADData, 1500);
+
+            // Also fetch when page becomes visible again (user switches tabs)
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    fetchPEADData();
+                }
+            });
+        });
+
+        // Make function globally available for manual refresh
+        window.fetchPEADData = fetchPEADData;
+
+        // ============================================================
+        // 2. TICKER DATA — NSE (India) + US Stocks
         // ============================================================
         const nseData = [
             { symbol: 'ADANIENT', price: '3039.59', change: '+2.96%', color: 'green' },
@@ -629,7 +987,7 @@
         ];
 
         // ============================================================
-        // 2. RENDER TICKER
+        // 3. RENDER TICKER
         // ============================================================
         function renderTicker(data, containerId) {
             const container = document.getElementById(containerId);
@@ -657,7 +1015,7 @@
         renderTicker(usData, 'tickerUS');
 
         // ============================================================
-        // 3. SIMULATED REAL-TIME PRICE UPDATE (Every 5 seconds)
+        // 4. SIMULATED REAL-TIME PRICE UPDATE (Every 5 seconds)
         // ============================================================
         function updateTickerPrices() {
             // Update NSE
@@ -716,7 +1074,7 @@
         setInterval(updateTickerPrices, 5000);
 
         // ============================================================
-        // 4. REAL-TIME NEWS — RSS Feeds (No API Key Required)
+        // 5. REAL-TIME NEWS — RSS Feeds (No API Key Required)
         // ============================================================
         async function fetchRealTimeNews() {
             const newsContainer = document.getElementById('newsContainer');
@@ -785,7 +1143,7 @@
         setInterval(fetchRealTimeNews, 120000);
 
         // ============================================================
-        // 5. ALERT BOT — Add & Remove Alerts
+        // 6. ALERT BOT — Add & Remove Alerts
         // ============================================================
         const alertList = document.getElementById('alertList');
         const addAlertBtn = document.getElementById('addAlertBtn');
@@ -798,7 +1156,8 @@
             const id = Date.now();
             const div = document.createElement('div');
             div.className = 'alert-item';
-            div.innerHTML = `<span>${symbol} ${condition} ${price}</span><span class="remove" data-id="${id}">✕</span>`;
+            div.innerHTML =
+                `<span>${symbol} ${condition} ${price}</span><span class="remove" data-id="${id}">✕</span>`;
             alertList.appendChild(div);
             document.getElementById('alertSymbol').value = '';
             document.getElementById('alertPrice').value = '';
@@ -813,18 +1172,20 @@
         });
 
         // ============================================================
-        // 6. STATUS BAR — Last Check Update
+        // 7. STATUS BAR — Last Check Update
         // ============================================================
         setInterval(() => {
             document.getElementById('alertLastCheck').textContent = new Date().toLocaleTimeString();
         }, 30000);
 
         // ============================================================
-        // 7. LOG — Dashboard Ready
+        // 8. LOG — Dashboard Ready
         // ============================================================
         console.log('🚀 SPRZONES Dashboard Live!');
+        console.log('📊 PEAD Agent: Connected to GitHub');
         console.log('✅ Ticker: NSE (' + nseData.length + ' stocks) | US (' + usData.length + ' stocks)');
         console.log('✅ Real-Time News: RSS feed (updates every 2 min)');
+        console.log('ℹ️ PEAD data refreshes automatically every 5 minutes');
         console.log('ℹ️ Ticker scrolls continuously, pause on hover.');
     </script>
 
