@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPRZonesPulse - Dashboard</title>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SPRZonesPulse – Project Status</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
-        /* ----- GLOBAL RESET & BACKGROUND (LegendPulse Style) ----- */
+        /* ============================================================
+           LEGENDPULSE-STYLE DARK THEME (Glassy + Glows)
+           ============================================================ */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         }
-
         body {
+            font-family: 'Inter', sans-serif;
             min-height: 100vh;
             background: radial-gradient(circle at 10% 20%, #0b0f1c, #05070e);
             display: flex;
@@ -25,11 +26,10 @@
             position: relative;
             overflow-x: hidden;
         }
-
-        /* Background magic (LegendPulse wali feel) */
+        /* Glowing orbs */
         body::before {
             content: '';
-            position: absolute;
+            position: fixed;
             top: -30%;
             left: -10%;
             width: 60%;
@@ -40,7 +40,7 @@
         }
         body::after {
             content: '';
-            position: absolute;
+            position: fixed;
             bottom: -20%;
             right: -10%;
             width: 50%;
@@ -50,12 +50,12 @@
             z-index: 0;
         }
 
-        /* ----- MAIN DASHBOARD CARD (Glassmorphism) ----- */
+        /* ---------- MAIN CARD (Glassmorphism) ---------- */
         .dashboard {
             position: relative;
             z-index: 10;
             width: 100%;
-            max-width: 1300px;
+            max-width: 1350px;
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -63,26 +63,23 @@
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
             padding: 30px 35px 40px 35px;
-            transition: all 0.3s ease;
         }
 
-        /* ----- HEADER & TABS (Right aligned) ----- */
-        .header {
+        /* ---------- NAVBAR ---------- */
+        .navbar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 18px;
+            margin-bottom: 24px;
             flex-wrap: wrap;
         }
-
-        .logo-area {
+        .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
-
         .logo-icon {
             width: 42px;
             height: 42px;
@@ -96,7 +93,6 @@
             color: #fff;
             box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
         }
-
         .logo-text {
             color: #fff;
             font-size: 22px;
@@ -107,17 +103,15 @@
             color: #a855f7;
         }
 
-        /* Tabs Container - RIGHT ALIGNED (fix karo) */
-        .nav-tabs {
+        /* Tabs – RIGHT ALIGNED */
+        .menu {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
-            justify-content: flex-end; /* RIGHT side fix */
-            width: auto;
+            justify-content: flex-end;  /* 🔥 RIGHT SIDE FIX */
         }
-
-        .nav-tabs a {
+        .menu a {
             color: rgba(255, 255, 255, 0.5);
             text-decoration: none;
             font-size: 14px;
@@ -125,34 +119,107 @@
             padding: 8px 16px;
             border-radius: 40px;
             transition: all 0.3s ease;
-            letter-spacing: 0.3px;
-            background: transparent;
             border: 1px solid transparent;
         }
-
-        .nav-tabs a i {
+        .menu a i {
             margin-right: 8px;
-            font-size: 13px;
         }
-
-        .nav-tabs a:hover {
+        .menu a:hover {
             color: #fff;
             background: rgba(255, 255, 255, 0.05);
         }
-
-        .nav-tabs a.active {
+        .menu a.active {
             color: #fff;
             background: rgba(168, 85, 247, 0.15);
             border: 1px solid rgba(168, 85, 247, 0.2);
             box-shadow: 0 0 15px rgba(168, 85, 247, 0.05);
         }
+        .menu a.upgrade {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+        }
 
-        /* ----- STATUS GRID (Teen projects) ----- */
-        .status-grid {
+        /* ---------- STATUS BAR (Lightweight) ---------- */
+        .status-bar {
+            display: flex;
+            gap: 28px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 8px 18px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            margin-bottom: 28px;
+            font-size: 13px;
+            font-weight: 600;
+            flex-wrap: wrap;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .status-bar .badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-bar .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot.green {
+            background: #00c897;
+        }
+        .dot.purple {
+            background: #a855f7;
+        }
+
+        /* ---------- TICKER STRIP ---------- */
+        .ticker-strip {
+            display: flex;
+            gap: 32px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px 24px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            margin-bottom: 28px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .ticker-item {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .ticker-item .symbol {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+        .ticker-item .price {
+            color: #fff;
+            font-weight: 700;
+        }
+        .ticker-item .change {
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .ticker-item .change.green {
+            color: #00c897;
+            background: rgba(0, 200, 151, 0.15);
+        }
+        .ticker-item .change.red {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.15);
+        }
+
+        /* ---------- PROJECT CARDS GRID ---------- */
+        .project-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 10px;
+            gap: 24px;
+            margin-bottom: 28px;
         }
 
         .project-card {
@@ -164,36 +231,30 @@
             transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
-
         .project-card:hover {
             transform: translateY(-6px);
             border-color: rgba(168, 85, 247, 0.2);
             background: rgba(255, 255, 255, 0.04);
             box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
         }
-
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
-
         .card-title {
             color: #fff;
             font-size: 17px;
             font-weight: 600;
-            letter-spacing: -0.2px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
-
         .card-title i {
             color: #a855f7;
             font-size: 20px;
         }
-
         .status-badge {
             padding: 5px 14px;
             border-radius: 40px;
@@ -206,52 +267,56 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             white-space: nowrap;
         }
-
         .status-badge.online {
             background: rgba(0, 255, 170, 0.12);
             color: #00ffaa;
             border-color: rgba(0, 255, 170, 0.2);
             box-shadow: 0 0 20px rgba(0, 255, 170, 0.05);
         }
-
         .status-badge.offline {
             background: rgba(255, 70, 70, 0.12);
             color: #ff5555;
             border-color: rgba(255, 70, 70, 0.2);
         }
-
         .status-badge.warning {
             background: rgba(255, 200, 0, 0.12);
             color: #ffcc00;
             border-color: rgba(255, 200, 0, 0.2);
         }
-
+        .card-message {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
         .card-details {
             color: rgba(255, 255, 255, 0.5);
             font-size: 14px;
             line-height: 1.7;
             border-top: 1px solid rgba(255, 255, 255, 0.03);
-            padding-top: 18px;
-            margin-top: 5px;
+            padding-top: 16px;
         }
-
         .card-details i {
             width: 20px;
             color: rgba(255, 255, 255, 0.2);
             margin-right: 8px;
         }
 
+        /* ---------- REFRESH AREA ---------- */
         .refresh-area {
             display: flex;
             justify-content: flex-end;
-            margin-top: 35px;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            padding-top: 25px;
-            gap: 15px;
             align-items: center;
+            gap: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 24px;
+            margin-top: 4px;
             flex-wrap: wrap;
         }
-
+        .timestamp {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 13px;
+        }
         .refresh-btn {
             background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(0, 240, 255, 0.05));
             border: 1px solid rgba(168, 85, 247, 0.2);
@@ -267,7 +332,6 @@
             align-items: center;
             gap: 12px;
         }
-
         .refresh-btn:hover {
             background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(0, 240, 255, 0.1));
             border-color: #a855f7;
@@ -275,65 +339,101 @@
             transform: scale(1.02);
         }
 
-        .timestamp {
-            color: rgba(255, 255, 255, 0.25);
-            font-size: 13px;
-            font-weight: 400;
-        }
-
-        /* Mobile Responsive */
+        /* ---------- RESPONSIVE ---------- */
         @media (max-width: 768px) {
-            .header {
+            .dashboard {
+                padding: 20px;
+                border-radius: 28px;
+            }
+            .navbar {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 15px;
+                gap: 12px;
             }
-            .nav-tabs {
+            .menu {
                 justify-content: flex-start;
                 width: 100%;
                 overflow-x: auto;
                 flex-wrap: nowrap;
-                padding-bottom: 5px;
+                padding-bottom: 4px;
             }
-            .nav-tabs a {
+            .menu a {
                 font-size: 12px;
                 padding: 6px 12px;
                 white-space: nowrap;
             }
-            .dashboard {
-                padding: 20px;
-                border-radius: 28px;
+            .project-grid {
+                grid-template-columns: 1fr;
+            }
+            .status-bar {
+                gap: 14px;
+                font-size: 12px;
+            }
+            .ticker-strip {
+                gap: 18px;
+                font-size: 12px;
+            }
+            .refresh-area {
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
+
     <div class="dashboard">
 
-        <!-- HEADER: Logo + Tabs (Right aligned) -->
-        <div class="header">
-            <div class="logo-area">
+        <!-- ============================================================
+        NAVBAR with RIGHT-ALIGNED TABS
+        ============================================================ -->
+        <nav class="navbar">
+            <div class="logo">
                 <div class="logo-icon"><i class="fas fa-cubes"></i></div>
-                <!-- ✅ CHANGE: ProjectPulse -> SPRZonesPulse -->
                 <div class="logo-text">SPRZones<span>Pulse</span></div>
             </div>
-            <div class="nav-tabs">
-                <!-- "SPRZones Financial Markets" delete kar diya, tabs right mein fix hain -->
+            <div class="menu">
                 <a href="#" class="active"><i class="fas fa-home"></i> Home</a>
                 <a href="#"><i class="fas fa-chart-line"></i> Dashboard</a>
                 <a href="#"><i class="fas fa-code-branch"></i> Crypto & Forex</a>
                 <a href="#"><i class="fas fa-chart-bar"></i> Stocks</a>
                 <a href="#"><i class="fas fa-history"></i> History</a>
-                <a href="#" style="background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border: none; padding: 8px 20px;"><i class="fas fa-rocket"></i> Upgrade</a>
+                <a href="#" class="upgrade"><i class="fas fa-rocket"></i> Upgrade</a>
             </div>
+        </nav>
+
+        <!-- ============================================================
+        STATUS BAR (just for vibes)
+        ============================================================ -->
+        <div class="status-bar">
+            <span class="badge"><span class="dot green"></span> AI Active</span>
+            <span class="badge"><span class="dot green"></span> Market Live</span>
+            <span class="badge">📊 <span style="color:#a855f7;">95%+</span> Accuracy</span>
+            <span class="badge">📈 <span style="color:#00c897;">20</span> Total Analyses</span>
+            <span class="badge">🏆 <span style="color:#ffc107;">93.9%</span> Success Rate</span>
         </div>
 
-        <!-- GRID: Teen projects ki status -->
-        <div class="status-grid" id="projectGrid">
-            <!-- Cards JS se generate honge -->
+        <!-- ============================================================
+        TICKER STRIP (dummy data)
+        ============================================================ -->
+        <div class="ticker-strip">
+            <div class="ticker-item"><span class="symbol">S&P 500</span><span class="price">7,500.58</span><span class="change green">+1.44%</span></div>
+            <div class="ticker-item"><span class="symbol">NASDAQ</span><span class="price">26,517.93</span><span class="change green">+2.74%</span></div>
+            <div class="ticker-item"><span class="symbol">NIFTY 50</span><span class="price">22,550.40</span><span class="change red">-0.50%</span></div>
+            <div class="ticker-item"><span class="symbol">BTC/USD</span><span class="price">67,890</span><span class="change green">+2.40%</span></div>
+            <div class="ticker-item"><span class="symbol">XAUUSD</span><span class="price">2,350.00</span><span class="change green">+0.80%</span></div>
+            <div class="ticker-item"><span class="symbol">EUR/USD</span><span class="price">1.0850</span><span class="change red">-0.20%</span></div>
         </div>
 
-        <!-- Refresh Area -->
+        <!-- ============================================================
+        PROJECT STATUS CARDS (Main Content)
+        ============================================================ -->
+        <div class="project-grid" id="projectGrid">
+            <!-- JS se dynamically generate honge -->
+        </div>
+
+        <!-- ============================================================
+        REFRESH AREA
+        ============================================================ -->
         <div class="refresh-area">
             <span class="timestamp" id="lastUpdated"><i class="far fa-clock"></i> Last updated: Just now</span>
             <button class="refresh-btn" onclick="checkAllStatus()"><i class="fas fa-sync-alt"></i> Refresh Status</button>
@@ -341,43 +441,50 @@
 
     </div>
 
+    <!-- ============================================================
+    JAVASCRIPT — STATUS CHECK LOGIC
+    ============================================================ -->
     <script>
         // --------------------------------------------------------------
-        // ✅ STEP 1: YAHAN APNE ASLI PROJECTS KI DETAILS DAALO
+        // 🔥 YAHAN APNE ASLI PROJECTS KI DETAILS DAALO
         // --------------------------------------------------------------
         const PROJECTS = [
-            { 
-                id: 1, 
-                name: 'Shariah Screener', 
+            {
+                id: 1,
+                name: 'Shariah Screener',
                 icon: 'fa-shield-halved',
-                // YAHAN APNA REAL URL DAALO (agar hai toh)
-                url: 'https://your-api.com/screener/health', 
-                // YAHAN APNA GITHUB REPO DAALO (agar URL nahi hai toh)
-                repo: 'your-username/shariah-technical-screener' 
+                // Apna real URL daalo (agar hai toh)
+                url: 'https://your-api.com/screener/health',
+                // Agar URL nahi hai toh GitHub repo daalo (username/repo)
+                repo: 'your-username/shariah-technical-screener'
             },
-            { 
-                id: 2, 
-                name: 'PEAD Earnings Agent', 
+            {
+                id: 2,
+                name: 'PEAD Earnings Agent',
                 icon: 'fa-bullhorn',
                 url: 'https://your-api.com/pead/health',
                 repo: 'your-username/pead-earnings-agent'
             },
-            { 
-                id: 3, 
-                name: 'Market Alert Bot', 
+            {
+                id: 3,
+                name: 'Market Alert Bot',
                 icon: 'fa-bell',
                 url: 'https://your-api.com/alert/health',
                 repo: 'your-username/Market-Alert-Bot'
             }
         ];
 
-        // Agar GitHub Private repo hai toh TOKEN yahan daalo, warna khali chhodo
-        const GITHUB_TOKEN = ''; 
+        // Agar GitHub Private repo hai toh PAT token yahan daalo, warna khali chhodo
+        const GITHUB_TOKEN = '';
 
-        // ----- Status Check karne wala function -----
+        // ----- Main status check function -----
         async function checkAllStatus() {
             const grid = document.getElementById('projectGrid');
-            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:rgba(255,255,255,0.5); padding:40px;"><i class="fas fa-spinner fa-spin"></i> Checking status...</div>`;
+            grid.innerHTML = `
+                <div style="grid-column:1/-1; text-align:center; color:rgba(255,255,255,0.5); padding:40px;">
+                    <i class="fas fa-spinner fa-spin"></i> Checking status...
+                </div>
+            `;
 
             const promises = PROJECTS.map(async (project) => {
                 let status = 'offline';
@@ -385,14 +492,13 @@
                 let detail = '';
 
                 try {
-                    // Pehle URL ping karte hain (agar URL diya hai)
+                    // 1️⃣ Try URL ping (if provided and not dummy)
                     if (project.url && project.url !== 'https://your-api.com/.../health') {
-                        const response = await fetch(project.url, { 
+                        const response = await fetch(project.url, {
                             method: 'GET',
                             headers: { 'Accept': 'application/json' },
-                            signal: AbortSignal.timeout(5000) 
+                            signal: AbortSignal.timeout(5000)
                         });
-                        
                         if (response.ok) {
                             const data = await response.json().catch(() => ({}));
                             if (data.status === 'ok' || data.status === 'success' || response.status === 200) {
@@ -406,8 +512,8 @@
                             status = 'offline';
                             message = `❌ HTTP ${response.status}`;
                         }
-                    } 
-                    // Agar URL nahi diya, toh GitHub Action status check karo
+                    }
+                    // 2️⃣ Else try GitHub Actions (if repo provided)
                     else if (project.repo && project.repo !== 'your-username/...') {
                         const apiUrl = `https://api.github.com/repos/${project.repo}/actions/runs?per_page=1`;
                         const headers = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
@@ -436,27 +542,26 @@
                             message = '❌ GitHub API error';
                         }
                     } else {
-                        // Demo mode - dummy data (agar kuch configure nahi kiya)
+                        // Demo mode – sab green (agar kuch configure nahi kiya)
                         status = 'online';
                         message = '✅ Demo Mode (Configure URLs)';
                     }
-
                 } catch (error) {
                     status = 'offline';
                     message = '❌ Connection Timeout / Error';
                 }
 
                 if (!detail) detail = new Date().toLocaleTimeString();
-
                 return { ...project, status, message, detail };
             });
 
             const results = await Promise.all(promises);
             renderCards(results);
-            document.getElementById('lastUpdated').innerHTML = `<i class="far fa-clock"></i> Last updated: ${new Date().toLocaleString()}`;
+            document.getElementById('lastUpdated').innerHTML =
+                `<i class="far fa-clock"></i> Last updated: ${new Date().toLocaleString()}`;
         }
 
-        // ----- Cards Render karna -----
+        // ----- Render cards -----
         function renderCards(projects) {
             const grid = document.getElementById('projectGrid');
             grid.innerHTML = '';
@@ -466,18 +571,20 @@
                 card.className = 'project-card';
 
                 const statusClass = p.status === 'online' ? 'online' : (p.status === 'warning' ? 'warning' : 'offline');
-                const statusIcon = p.status === 'online' ? 'fa-circle-check' : (p.status === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-xmark');
+                const statusIcon = p.status === 'online' ? 'fa-circle-check' :
+                                  (p.status === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-xmark');
 
                 card.innerHTML = `
                     <div class="card-header">
                         <div class="card-title">
                             <i class="fas ${p.icon}"></i> ${p.name}
                         </div>
-                        <span class="status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${p.status === 'online' ? 'Online' : (p.status === 'warning' ? 'Warning' : 'Offline')}</span>
+                        <span class="status-badge ${statusClass}">
+                            <i class="fas ${statusIcon}"></i>
+                            ${p.status === 'online' ? 'Online' : (p.status === 'warning' ? 'Warning' : 'Offline')}
+                        </span>
                     </div>
-                    <div style="color: #fff; font-size: 15px; font-weight: 500; margin-bottom: 8px;">
-                        ${p.message}
-                    </div>
+                    <div class="card-message">${p.message}</div>
                     <div class="card-details">
                         <div><i class="fas fa-code-fork"></i> Status: ${p.status.toUpperCase()}</div>
                         <div><i class="fas fa-clock"></i> Detail: ${p.detail || 'N/A'}</div>
@@ -487,10 +594,10 @@
             });
         }
 
-        // ----- Page Load pe automatically check karo -----
+        // ----- Auto-load and auto-refresh -----
         window.onload = function() {
             checkAllStatus();
-            setInterval(checkAllStatus, 60000);
+            setInterval(checkAllStatus, 60000); // har 1 minute
         };
     </script>
 
