@@ -1,1197 +1,502 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPRZONES Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Status Dashboard</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ============================================================
-           SPRZONES DARK THEME
-           ============================================================ */
+        /* ----- GLOBAL RESET & BACKGROUND (LegendPulse Style) ----- */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background: #0a0e17;
-            color: #d1d5db;
-            padding: 16px;
             min-height: 100vh;
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1a1f2e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2d3748;
-            border-radius: 4px;
-        }
-
-        /* ---------- NAVBAR ---------- */
-        .navbar {
+            background: radial-gradient(circle at 10% 20%, #0b0f1c, #05070e);
             display: flex;
+            justify-content: center;
             align-items: center;
-            justify-content: space-between;
-            background: #0f1420;
-            padding: 10px 24px;
-            border-radius: 12px;
-            border: 1px solid #1e2a3a;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-        .navbar .logo {
-            font-size: 20px;
-            font-weight: 800;
-            color: #f0b90b;
-            letter-spacing: 0.5px;
-        }
-        .navbar .logo i {
-            margin-right: 8px;
-        }
-        .navbar .menu {
-            display: flex;
-            gap: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #8b95a9;
-        }
-        .navbar .menu span {
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .navbar .menu span:hover {
-            color: #ffffff;
-        }
-        .navbar .menu .active {
-            color: #f0b90b;
-        }
-        .navbar .right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            font-size: 14px;
-            color: #8b95a9;
-        }
-        .navbar .right i {
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .navbar .right i:hover {
-            color: #ffffff;
-        }
-
-        /* ---------- STATUS BAR ---------- */
-        .status-bar {
-            display: flex;
-            gap: 24px;
-            background: #0f1420;
-            padding: 8px 20px;
-            border-radius: 12px;
-            border: 1px solid #1e2a3a;
-            margin-bottom: 16px;
-            font-size: 13px;
-            font-weight: 600;
-            flex-wrap: wrap;
-        }
-        .status-bar .badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .status-bar .badge .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .badge .dot.green {
-            background: #00c897;
-        }
-        .badge .dot.red {
-            background: #ff6b6b;
-        }
-
-        /* ---------- GRID LAYOUT ---------- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-        .widget {
-            background: #0f1420;
-            border: 1px solid #1e2a3a;
-            border-radius: 12px;
-            padding: 16px 18px;
-            transition: border-color 0.2s;
-        }
-        .widget:hover {
-            border-color: #2d3748;
-        }
-        .widget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #8b95a9;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .widget-header i {
-            color: #f0b90b;
-        }
-        .widget-header .tag {
-            font-size: 10px;
-            text-transform: none;
-            background: rgba(0, 200, 151, 0.15);
-            color: #00c897;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        .widget-header .tag.alert {
-            background: rgba(255, 107, 107, 0.15);
-            color: #ff6b6b;
-        }
-        .refresh-tag {
-            font-size: 10px;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .refresh-tag .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #00c897;
-            display: inline-block;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-
-        /* ---------- RECOMMENDATION CARD ---------- */
-        .rec-card {
-            background: #141b2b;
-            border-radius: 8px;
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            border-left: 3px solid #f0b90b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .rec-card .symbol {
-            font-weight: 700;
-            color: #ffffff;
-        }
-        .rec-card .action {
-            font-weight: 700;
-            color: #00c897;
-        }
-        .rec-card .action.sell {
-            color: #ff6b6b;
-        }
-        .rec-card .target {
-            font-size: 12px;
-            color: #8b95a9;
-        }
-
-        /* ---------- SCREENER ITEM ---------- */
-        .screener-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid #1a1f2e;
-            font-size: 13px;
-        }
-        .screener-item:last-child {
-            border-bottom: none;
-        }
-        .screener-item .name {
-            color: #d1d5db;
-        }
-        .screener-item .score {
-            font-weight: 700;
-        }
-        .screener-item .score.green {
-            color: #00c897;
-        }
-        .screener-item .score.red {
-            color: #ff6b6b;
-        }
-        .screener-item .score.yellow {
-            color: #ffc107;
-        }
-
-        /* ---------- PEAD SPECIFIC ---------- */
-        .pead-loading {
-            text-align: center;
             padding: 20px;
-            color: #4a5568;
+            /* Glowing orb effect in background */
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background magic (LegendPulse wali feel) */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: -10%;
+            width: 60%;
+            height: 80%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.08), transparent 70%);
+            filter: blur(80px);
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            right: -10%;
+            width: 50%;
+            height: 70%;
+            background: radial-gradient(circle, rgba(200, 0, 255, 0.08), transparent 70%);
+            filter: blur(80px);
+            z-index: 0;
+        }
+
+        /* ----- MAIN DASHBOARD CARD (Glassmorphism) ----- */
+        .dashboard {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 1300px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 48px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+            padding: 30px 35px 40px 35px;
+            transition: all 0.3s ease;
+        }
+
+        /* ----- HEADER & TABS (Right aligned) ----- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #00f0ff, #a855f7);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        .logo-text {
+            color: #fff;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .logo-text span {
+            color: #a855f7;
+        }
+
+        /* Tabs Container - RIGHT ALIGNED (fix karo) */
+        .nav-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end; /* RIGHT side fix */
+            width: auto;
+        }
+
+        .nav-tabs a {
+            color: rgba(255, 255, 255, 0.5);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+            letter-spacing: 0.3px;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .nav-tabs a i {
+            margin-right: 8px;
             font-size: 13px;
         }
-        .pead-error {
-            color: #ff6b6b;
-            padding: 12px;
-            border: 1px solid #ff6b6b;
-            border-radius: 4px;
-            background: rgba(255, 107, 107, 0.1);
-            font-size: 13px;
+
+        .nav-tabs a:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-tabs a.active {
+            color: #fff;
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.05);
+        }
+
+        /* "SPRZones" wali text hata di (delete) - ab kuch nahi dikhega */
+        .hidden-badge {
             display: none;
         }
-        .pead-table-wrap {
-            overflow-x: auto;
-        }
-        .pead-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-        .pead-table th {
-            text-align: left;
-            padding: 8px 10px;
-            border-bottom: 2px solid #1e2a3a;
-            color: #8b95a9;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: 0.5px;
-        }
-        .pead-table td {
-            padding: 8px 10px;
-            border-bottom: 1px solid #1a1f2e;
-        }
-        .pead-table tr:last-child td {
-            border-bottom: none;
-        }
-        .pead-table tr:nth-child(even) {
-            background: #0b111c;
-        }
-        .pead-action-buy {
-            background: rgba(0, 200, 151, 0.2);
-            color: #00c897;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 11px;
-        }
-        .pead-action-watch {
-            background: rgba(255, 193, 7, 0.2);
-            color: #ffc107;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 11px;
-        }
-        .pead-action-avoid {
-            background: rgba(255, 107, 107, 0.2);
-            color: #ff6b6b;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 11px;
+
+        /* ----- STATUS GRID (Teen projects) ----- */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 10px;
         }
 
-        /* ---------- ALERT BOT ---------- */
-        .alert-form {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin: 8px 0;
+        .project-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            padding: 28px 24px 24px 24px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
-        .alert-form input,
-        .alert-form select {
-            background: #1a1f2e;
-            border: 1px solid #2d3748;
-            color: #d1d5db;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            flex: 1;
-            min-width: 60px;
+
+        .project-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(168, 85, 247, 0.2);
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
         }
-        .alert-form button {
-            background: #f0b90b;
-            color: #0a0e17;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .alert-form button:hover {
-            opacity: 0.8;
-        }
-        .alert-item {
+
+        .card-header {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
-            font-size: 12px;
-            border-bottom: 1px solid #1a1f2e;
-        }
-        .alert-item .remove {
-            color: #ff6b6b;
-            cursor: pointer;
+            align-items: flex-start;
+            margin-bottom: 20px;
         }
 
-        /* ---------- BOTTOM ROW ---------- */
-        .bottom-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
-            margin-top: 16px;
+        .card-title {
+            color: #fff;
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        /* ============================================================
-           TICKER WRAPPER — Two Lines (NSE + US)
-           ============================================================ */
-        .ticker-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: 16px;
+        .card-title i {
+            color: #a855f7;
+            font-size: 20px;
         }
-        .ticker-strip {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: #0f1420;
-            padding: 6px 16px;
-            border-radius: 10px;
-            border: 1px solid #1e2a3a;
-            overflow: hidden;
-            white-space: nowrap;
-            position: relative;
-            height: 38px;
-        }
-        .ticker-track {
-            display: flex;
-            gap: 28px;
-            align-items: center;
-            animation: scrollTicker 30s linear infinite;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .ticker-strip:hover .ticker-track {
-            animation-play-state: paused;
-        }
-        .ticker-strip .ticker-label {
+
+        .status-badge {
+            padding: 5px 14px;
+            border-radius: 40px;
             font-size: 12px;
-            font-weight: 700;
-            color: #f0b90b;
-            background: rgba(240, 185, 11, 0.12);
-            padding: 4px 12px;
-            border-radius: 6px;
-            flex-shrink: 0;
+            font-weight: 600;
             letter-spacing: 0.5px;
-            z-index: 2;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.05);
+            color: #aaa;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+
+        .status-badge.online {
+            background: rgba(0, 255, 170, 0.12);
+            color: #00ffaa;
+            border-color: rgba(0, 255, 170, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.05);
+        }
+
+        .status-badge.offline {
+            background: rgba(255, 70, 70, 0.12);
+            color: #ff5555;
+            border-color: rgba(255, 70, 70, 0.2);
+        }
+
+        .status-badge.warning {
+            background: rgba(255, 200, 0, 0.12);
+            color: #ffcc00;
+            border-color: rgba(255, 200, 0, 0.2);
+        }
+
+        .card-details {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            line-height: 1.7;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            padding-top: 18px;
+            margin-top: 5px;
+        }
+
+        .card-details i {
+            width: 20px;
+            color: rgba(255, 255, 255, 0.2);
             margin-right: 8px;
-            position: sticky;
-            left: 0;
         }
-        .ticker-item {
+
+        .refresh-area {
             display: flex;
-            align-items: baseline;
-            gap: 6px;
+            justify-content: flex-end;
+            margin-top: 35px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 25px;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(0, 240, 255, 0.05));
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            color: #fff;
+            padding: 12px 32px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(0, 240, 255, 0.1));
+            border-color: #a855f7;
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.15);
+            transform: scale(1.02);
+        }
+
+        .timestamp {
+            color: rgba(255, 255, 255, 0.25);
             font-size: 13px;
-            flex-shrink: 0;
-        }
-        .ticker-item .symbol {
-            color: #8b95a9;
-            font-weight: 600;
-        }
-        .ticker-item .price {
-            color: #ffffff;
-            font-weight: 700;
-        }
-        .ticker-item .change {
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .ticker-item .change.green {
-            color: #00c897;
-            background: rgba(0, 200, 151, 0.15);
-        }
-        .ticker-item .change.red {
-            color: #ff6b6b;
-            background: rgba(255, 107, 107, 0.15);
+            font-weight: 400;
         }
 
-        @keyframes scrollTicker {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* ---------- IMPACT BADGE ---------- */
-        .impact {
-            display: inline-block;
-            padding: 1px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 700;
-            margin-left: 6px;
-        }
-        .impact-high {
-            background: rgba(255, 107, 107, 0.2);
-            color: #ff6b6b;
-        }
-        .impact-medium {
-            background: rgba(255, 193, 7, 0.2);
-            color: #ffc107;
-        }
-        .impact-low {
-            background: rgba(0, 200, 151, 0.2);
-            color: #00c897;
-        }
-
-        /* ---------- RESPONSIVE ---------- */
-        @media (max-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            .bottom-row {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        @media (max-width: 640px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            .bottom-row {
-                grid-template-columns: 1fr;
-            }
-            .navbar .menu {
-                display: none;
-            }
-            .navbar {
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .header {
                 flex-direction: column;
-                gap: 8px;
+                align-items: flex-start;
+                gap: 15px;
             }
-            .ticker-strip {
-                height: 34px;
-                padding: 4px 12px;
+            .nav-tabs {
+                justify-content: flex-start;
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 5px;
             }
-            .ticker-item {
-                font-size: 11px;
+            .nav-tabs a {
+                font-size: 12px;
+                padding: 6px 12px;
+                white-space: nowrap;
             }
-            .ticker-track {
-                gap: 16px;
+            .dashboard {
+                padding: 20px;
+                border-radius: 28px;
             }
         }
     </style>
 </head>
 <body>
+    <div class="dashboard">
 
-    <!-- ============================================================
-    NAVBAR
-    ============================================================ -->
-    <nav class="navbar">
-        <div class="logo">
-            <i class="fas fa-chart-simple"></i> SPRZONES
+        <!-- HEADER: Logo + Tabs (Right aligned) -->
+        <div class="header">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fas fa-cubes"></i></div>
+                <div class="logo-text">Project<span>Pulse</span></div>
+            </div>
+            <div class="nav-tabs">
+                <!-- "SPRZones Financial Markets" delete kar diya, ab yeh saare tabs right mein fix hain -->
+                <a href="#" class="active"><i class="fas fa-home"></i> Home</a>
+                <a href="#"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a href="#"><i class="fas fa-code-branch"></i> Crypto & Forex</a>
+                <a href="#"><i class="fas fa-chart-bar"></i> Stocks</a>
+                <a href="#"><i class="fas fa-history"></i> History</a>
+                <a href="#" style="background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border: none; padding: 8px 20px;"><i class="fas fa-rocket"></i> Upgrade</a>
+            </div>
         </div>
-        <div class="menu">
-            <span class="active">DASHBOARD</span>
-            <span>CRYPTO & FOREX</span>
-            <span>STOCKS</span>
-            <span>HISTORY</span>
-            <span>UPGRADE</span>
-        </div>
-        <div class="right">
-            <span style="font-size:13px;font-weight:600;color:#f0b90b;letter-spacing:0.5px;">
-                <i class="fas fa-bolt" style="margin-right:6px;"></i> SPRZones FINANCIAL MARKETS
-            </span>
-        </div>
-    </nav>
 
-    <!-- ============================================================
-    TICKER STRIP — Two Lines (NSE + US)
-    ============================================================ -->
-    <div class="ticker-wrapper">
-        <div class="ticker-strip" id="tickerNSE">
-            <span class="ticker-label"><i class="fas fa-building"></i> NSE</span>
+        <!-- GRID: Teen projects ki status -->
+        <div class="status-grid" id="projectGrid">
+            <!-- Cards JS se generate honge -->
         </div>
-        <div class="ticker-strip" id="tickerUS">
-            <span class="ticker-label"><i class="fas fa-flag-usa"></i> US</span>
+
+        <!-- Refresh Area -->
+        <div class="refresh-area">
+            <span class="timestamp" id="lastUpdated"><i class="far fa-clock"></i> Last updated: Just now</span>
+            <button class="refresh-btn" onclick="checkAllStatus()"><i class="fas fa-sync-alt"></i> Refresh Status</button>
         </div>
+
     </div>
 
-    <!-- ============================================================
-    STATUS BAR
-    ============================================================ -->
-    <div class="status-bar">
-        <span class="badge"><span class="dot green"></span> AI Active</span>
-        <span class="badge"><span class="dot green"></span> Market Live</span>
-        <span class="badge">📊 <span style="color:#f0b90b;">95%+</span> Accuracy</span>
-        <span class="badge">📈 <span style="color:#00c897;">20</span> Total Analyses</span>
-        <span class="badge">🏆 <span style="color:#ffc107;">93.9%</span> Success Rate</span>
-        <span class="badge">📊 <span style="color:#f0b90b;">PEAD</span> <span id="peadStatusIndicator" style="color:#00c897;">● Live</span></span>
-    </div>
-
-    <!-- ============================================================
-    MAIN GRID — 4 WIDGETS (PEAD replaced the old one)
-    ============================================================ -->
-    <div class="dashboard-grid">
-
-        <!-- ---- WIDGET 1: AI RECOMMENDATIONS ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-robot"></i> AI Recommendations</span>
-                <span class="tag">Live</span>
-            </div>
-            <div id="aiRecs">
-                <div class="rec-card"><span><span class="symbol">USD/JPY</span> <span class="target">12.0%</span></span><span class="action">BUY</span></div>
-                <div class="rec-card"><span><span class="symbol">EUR/USD</span> <span class="target">12.0%</span></span><span class="action">BUY</span></div>
-                <div class="rec-card"><span><span class="symbol">BTC</span> <span class="target">+10.0%</span></span><span class="action">BUY</span></div>
-                <div class="rec-card"><span><span class="symbol">TLKM</span> <span class="target">+15.0%</span></span><span class="action">BUY</span></div>
-            </div>
-        </div>
-
-        <!-- ---- WIDGET 2: PEAD SCREENER (DYNAMIC) ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-chart-bar"></i> PEAD Screener</span>
-                <span class="tag" id="peadTag">Loading...</span>
-            </div>
-            <div id="peadContainer">
-                <!-- Loading State -->
-                <div id="peadLoading" class="pead-loading">
-                    <i class="fas fa-spinner fa-spin"></i> Fetching PEAD data...
-                </div>
-                <!-- Error State -->
-                <div id="peadError" class="pead-error">
-                    <i class="fas fa-exclamation-triangle"></i> <span id="peadErrorMsg"></span>
-                </div>
-                <!-- Results -->
-                <div id="peadResults" style="display:none;">
-                    <div class="pead-table-wrap">
-                        <table class="pead-table" id="peadTable">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Stock</th>
-                                    <th>Score</th>
-                                    <th>Action</th>
-                                    <th>Rev Growth</th>
-                                    <th>PAT Growth</th>
-                                    <th>CMP (₹)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="peadTbody">
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="font-size:11px;color:#4a5568;margin-top:6px;" id="peadSummary">
-                        <span id="peadTimestamp"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ---- WIDGET 3: SHARIAH TECHNICAL SCREENER ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-mosque"></i> Shariah Screener</span>
-                <span class="tag">Compliance + Tech</span>
-            </div>
-            <div id="shariahContainer">
-                <div class="screener-item"><span class="name">AAPL (D/E: 28%)</span><span class="score green">✅ RSI: 45</span></div>
-                <div class="screener-item"><span class="name">MSFT (D/E: 22%)</span><span class="score green">✅ RSI: 52</span></div>
-                <div class="screener-item"><span class="name">NVDA (D/E: 19%)</span><span class="score yellow">⚠️ RSI: 72</span></div>
-                <div class="screener-item"><span class="name">GOOGL (D/E: 35%)</span><span class="score red">❌ D/E >33%</span></div>
-                <div class="screener-item"><span class="name">TSLA (D/E: 40%)</span><span class="score red">❌ Non-Halal</span></div>
-            </div>
-        </div>
-
-        <!-- ---- WIDGET 4: MARKET ALERT BOT ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-bell"></i> Alert Bot</span>
-                <span class="tag alert">Real-Time</span>
-            </div>
-            <div class="alert-form">
-                <input type="text" id="alertSymbol" placeholder="Symbol" value="BTC" />
-                <select id="alertCondition"><option value="above">Above</option><option value="below">Below</option></select>
-                <input type="number" id="alertPrice" placeholder="Price" value="70000" />
-                <button id="addAlertBtn">+ Add</button>
-            </div>
-            <div id="alertList">
-                <div class="alert-item"><span>BTC > 70000</span><span class="remove" data-id="1">✕</span></div>
-                <div class="alert-item"><span>ETH > 4000</span><span class="remove" data-id="2">✕</span></div>
-                <div class="alert-item"><span>XAUUSD < 2300</span><span class="remove" data-id="3">✕</span></div>
-            </div>
-            <div style="font-size:10px;color:#4a5568;margin-top:6px;">⚡ Last check: <span id="alertLastCheck">Just now</span></div>
-        </div>
-
-    </div><!-- /dashboard-grid -->
-
-    <!-- ============================================================
-    BOTTOM ROW
-    ============================================================ -->
-    <div class="bottom-row">
-
-        <!-- ---- WIDGET 5: RECENT ANALYSES ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-clock-rotate-left"></i> Recent Analyses</span>
-                <span class="refresh-tag"><span class="dot"></span> 20 Total</span>
-            </div>
-            <div id="historyContainer">
-                <div class="screener-item"><span class="name">BTC/USDT - Double Bottom</span><span class="score green">BUY 85%</span></div>
-                <div class="screener-item"><span class="name">XAU/USD - Bullish Reversal</span><span class="score green">BUY 85%</span></div>
-                <div class="screener-item"><span class="name">GOLD/USD - Consolidation</span><span class="score green">BUY 85%</span></div>
-                <div class="screener-item"><span class="name">Entry: $8350.00</span><span class="score yellow">Pending</span></div>
-                <div class="screener-item"><span class="name">Entry: $4123.60</span><span class="score yellow">Pending</span></div>
-            </div>
-        </div>
-
-        <!-- ---- WIDGET 6: STOCK CATEGORIES ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-layer-group"></i> Stock Categories</span>
-                <span class="tag">Success: 93.9%</span>
-            </div>
-            <div id="categoriesContainer">
-                <div class="screener-item"><span class="name">Small Cap</span><span class="score green">5%</span></div>
-                <div class="screener-item"><span class="name">Medium Cap</span><span class="score green">10%</span></div>
-                <div class="screener-item"><span class="name">Large Cap</span><span class="score green">20%</span></div>
-                <div class="screener-item"><span class="name">All Categories</span><span class="score green">93.9%</span></div>
-                <div class="screener-item"><span class="name">Institutional Grade</span><span class="score green">11</span></div>
-                <div class="screener-item"><span class="name">Stock Analysis</span><span class="score green">11</span></div>
-            </div>
-        </div>
-
-        <!-- ---- WIDGET 7: REAL-TIME NEWS (RSS) ---- -->
-        <div class="widget">
-            <div class="widget-header">
-                <span><i class="fas fa-newspaper"></i> Real-Time News</span>
-                <span class="refresh-tag"><span class="dot"></span> <span id="newsTimestamp">Live</span></span>
-            </div>
-            <div id="newsContainer">
-                <div style="text-align:center;color:#4a5568;padding:20px;font-size:13px;">
-                    <i class="fas fa-spinner fa-spin"></i> Loading news...
-                </div>
-            </div>
-        </div>
-
-    </div><!-- /bottom-row -->
-
-    <!-- ============================================================
-    JAVASCRIPT
-    ============================================================ -->
     <script>
-        // ============================================================
-        // 1. PEAD DATA FETCHER (Dynamic from GitHub)
-        // ============================================================
-// ============================================================
-// 1. PEAD DATA FETCHER (Dynamic from GitHub)
-// ============================================================
-
-// --- CONFIGURATION (UPDATE THESE 2 LINES) ---
-
-const PEAD_CONFIG = {
-    USERNAME: 'SPRZonesBOT',        // ← CASE SENSITIVE: BOT capital BOT
-    REPO: 'pead-earnings-agent',
-    get RAW_URL() {
-        return `https://raw.githubusercontent.com/${this.USERNAME}/${this.REPO}/main/`;
-    }
-};
-        const PEAD_LOGS_URL = PEAD_CONFIG.RAW_URL + 'logs.txt';
-
-        // Cache keys
-        const PEAD_CACHE_KEY = 'pead_cache_data';
-        const PEAD_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
-
-        async function fetchPEADData() {
-            const container = document.getElementById('peadContainer');
-            const loading = document.getElementById('peadLoading');
-            const errorDiv = document.getElementById('peadError');
-            const results = document.getElementById('peadResults');
-            const tbody = document.getElementById('peadTbody');
-            const timestampSpan = document.getElementById('peadTimestamp');
-            const tagSpan = document.getElementById('peadTag');
-            const statusIndicator = document.getElementById('peadStatusIndicator');
-
-            // Show loading
-            loading.style.display = 'block';
-            errorDiv.style.display = 'none';
-            results.style.display = 'none';
-            tagSpan.textContent = 'Loading...';
-            tagSpan.style.color = '#ffc107';
-            if (statusIndicator) {
-                statusIndicator.textContent = '● Loading';
-                statusIndicator.style.color = '#ffc107';
+        // ----- APNE ASLI PROJECTS YAHAN DAALO (URLs / GitHub Repo names) -----
+        // Agar aapke paas Web URLs hain toh 'url' field mein daalo.
+        // Agar GitHub Actions se status lena hai toh 'repo' field bhi daalo (main ne dono ka logic laga diya hai).
+        const PROJECTS = [
+            { 
+                id: 1, 
+                name: 'Shariah Screener', 
+                icon: 'fa-shield-halved',
+                url: 'https://your-api.com/screener/health', // Is URL ko ping karega
+                repo: 'your-username/shariah-technical-screener' // GitHub repo (optional)
+            },
+            { 
+                id: 2, 
+                name: 'PEAD Earnings Agent', 
+                icon: 'fa-bullhorn',
+                url: 'https://your-api.com/pead/health',
+                repo: 'your-username/pead-earnings-agent'
+            },
+            { 
+                id: 3, 
+                name: 'Market Alert Bot', 
+                icon: 'fa-bell',
+                url: 'https://your-api.com/alert/health',
+                repo: 'your-username/Market-Alert-Bot'
             }
-
-            try {
-                // Check cache first
-                const cached = getCachedPEAD();
-                if (cached) {
-                    renderPEADTable(cached.picks);
-                    timestampSpan.textContent = `Last updated: ${cached.timestamp}`;
-                    tagSpan.textContent = 'Cached';
-                    tagSpan.style.color = '#00c897';
-                    loading.style.display = 'none';
-                    results.style.display = 'block';
-                    if (statusIndicator) {
-                        statusIndicator.textContent = '● Cached';
-                        statusIndicator.style.color = '#00c897';
-                    }
-                    return;
-                }
-
-                // Fetch from GitHub
-                const response = await fetch(PEAD_LOGS_URL);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                const logText = await response.text();
-
-                // Parse logs
-                const picks = parsePEADLog(logText);
-
-                if (picks.length === 0) {
-                    throw new Error('No PEAD picks found in the latest logs.');
-                }
-
-                // Render
-                renderPEADTable(picks);
-                const now = new Date();
-                const timestamp = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-                timestampSpan.textContent = `Last updated: ${timestamp}`;
-                tagSpan.textContent = 'Live';
-                tagSpan.style.color = '#00c897';
-                loading.style.display = 'none';
-                results.style.display = 'block';
-                if (statusIndicator) {
-                    statusIndicator.textContent = '● Live';
-                    statusIndicator.style.color = '#00c897';
-                }
-
-                // Cache data
-                setCachedPEAD(picks, timestamp);
-
-            } catch (error) {
-                console.error('PEAD fetch error:', error);
-                loading.style.display = 'none';
-                errorDiv.style.display = 'block';
-                document.getElementById('peadErrorMsg').textContent = error.message;
-                tagSpan.textContent = 'Error';
-                tagSpan.style.color = '#ff6b6b';
-                if (statusIndicator) {
-                    statusIndicator.textContent = '● Error';
-                    statusIndicator.style.color = '#ff6b6b';
-                }
-            }
-        }
-
-        // --- Parse PEAD log ---
-        function parsePEADLog(logText) {
-            const lines = logText.split('\n');
-            const picks = [];
-            let foundTop = false;
-
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-
-                // Look for the TOP picks header
-                if (line.includes('TOP') && line.includes('PICKS')) {
-                    foundTop = true;
-                    continue;
-                }
-
-                // Parse numbered entries
-                if (foundTop && line.match(/^\d+\./)) {
-                    const pick = parsePickLine(line);
-                    if (pick) {
-                        picks.push(pick);
-                        if (picks.length >= 10) break;
-                    }
-                }
-            }
-
-            // If we didn't find any picks, try fallback
-            if (picks.length === 0) {
-                // Look for ANY stock data in the log
-                const stockLines = lines.filter(line =>
-                    line.includes('BUY') || line.includes('WATCH') || line.includes('AVOID')
-                );
-                for (const line of stockLines) {
-                    const pick = parsePickLine(line);
-                    if (pick) {
-                        picks.push(pick);
-                        if (picks.length >= 10) break;
-                    }
-                }
-            }
-
-            return picks;
-        }
-
-        // --- Parse a single pick line ---
-        function parsePickLine(line) {
-            try {
-                let clean = line.replace(/\*/g, '');
-
-                // Extract number
-                const numMatch = clean.match(/^(\d+)\./);
-                if (!numMatch) return null;
-
-                // Extract company and symbol
-                let company = '';
-                let symbol = '';
-                const nameSymbolMatch = clean.match(/^\d+\.\s*(.+?)\s*\(([^)]+)\)/);
-                if (nameSymbolMatch) {
-                    company = nameSymbolMatch[1].trim();
-                    symbol = nameSymbolMatch[2].trim();
-                } else {
-                    const symbolMatch = clean.match(/^\d+\.\s*([A-Z]+)/);
-                    if (symbolMatch) {
-                        symbol = symbolMatch[1];
-                        company = symbol;
-                    } else {
-                        return null;
-                    }
-                }
-
-                // Extract Score
-                const scoreMatch = clean.match(/Score:\s*([\d.]+)/);
-                const score = scoreMatch ? scoreMatch[1] : 'N/A';
-
-                // Extract Action
-                const actionMatch = clean.match(/BUY|WATCH|AVOID/);
-                const action = actionMatch ? actionMatch[0] : 'N/A';
-
-                // Extract Revenue Growth
-                const revMatch = clean.match(/Rev\s*Growth:\s*([\d.]+)/);
-                const revGrowth = revMatch ? revMatch[1] : 'N/A';
-
-                // Extract PAT Growth
-                const patMatch = clean.match(/PAT\s*Growth:\s*([\d.]+)/);
-                const patGrowth = patMatch ? patMatch[1] : 'N/A';
-
-                // Extract CMP
-                const cmpMatch = clean.match(/CMP:\s*₹?([\d,]+\.?[\d]*)/);
-                const cmp = cmpMatch ? cmpMatch[1].replace(/,/g, '') : 'N/A';
-
-                return { number: numMatch[1], company, symbol, score, action, revGrowth, patGrowth, cmp };
-            } catch (e) {
-                return null;
-            }
-        }
-
-        // --- Render PEAD table ---
-        function renderPEADTable(picks) {
-            const tbody = document.getElementById('peadTbody');
-            if (!tbody) return;
-
-            if (picks.length === 0) {
-                tbody.innerHTML =
-                    `<tr><td colspan="7" style="text-align:center;padding:20px;color:#4a5568;">No PEAD picks available.</td></tr>`;
-                return;
-            }
-
-            let html = '';
-            picks.forEach((pick) => {
-                const actionClass = pick.action === 'BUY' ? 'pead-action-buy' :
-                    pick.action === 'WATCH' ? 'pead-action-watch' :
-                    'pead-action-avoid';
-                html += `<tr>
-                            <td>${pick.number || '-'}</td>
-                            <td><strong>${pick.company}</strong> (${pick.symbol})</td>
-                            <td style="font-weight:700;">${pick.score}</td>
-                            <td><span class="${actionClass}">${pick.action}</span></td>
-                            <td>${pick.revGrowth}%</td>
-                            <td>${pick.patGrowth}%</td>
-                            <td>${pick.cmp !== 'N/A' ? '₹' + pick.cmp : 'N/A'}</td>
-                        </tr>`;
-            });
-            tbody.innerHTML = html;
-        }
-
-        // --- Cache Management ---
-        function getCachedPEAD() {
-            try {
-                const cached = localStorage.getItem(PEAD_CACHE_KEY);
-                if (!cached) return null;
-                const data = JSON.parse(cached);
-                const now = new Date().getTime();
-                if (now - data.timestampMs > PEAD_CACHE_EXPIRY) {
-                    localStorage.removeItem(PEAD_CACHE_KEY);
-                    return null;
-                }
-                return { picks: data.picks, timestamp: data.timestamp };
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function setCachedPEAD(picks, timestamp) {
-            try {
-                const data = {
-                    picks: picks,
-                    timestamp: timestamp,
-                    timestampMs: new Date().getTime()
-                };
-                localStorage.setItem(PEAD_CACHE_KEY, JSON.stringify(data));
-            } catch (e) {}
-        }
-
-        // --- Auto-load on page load ---
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fetch PEAD after 1.5 seconds
-            setTimeout(fetchPEADData, 1500);
-
-            // Also fetch when page becomes visible again (user switches tabs)
-            document.addEventListener('visibilitychange', function() {
-                if (!document.hidden) {
-                    fetchPEADData();
-                }
-            });
-        });
-
-        // Make function globally available for manual refresh
-        window.fetchPEADData = fetchPEADData;
-
-        // ============================================================
-        // 2. TICKER DATA — NSE (India) + US Stocks
-        // ============================================================
-        const nseData = [
-            { symbol: 'ADANIENT', price: '3039.59', change: '+2.96%', color: 'green' },
-            { symbol: 'RELIANCE', price: '1327.79', change: '-0.33%', color: 'red' },
-            { symbol: 'TCS', price: '2078.29', change: '-6.51%', color: 'red' },
-            { symbol: 'HDFCBANK', price: '788.69', change: '+0.15%', color: 'green' },
-            { symbol: 'INFY', price: '1032.98', change: '-11.00%', color: 'red' },
-            { symbol: 'ICICIBANK', price: '1368.54', change: '+2.44%', color: 'green' },
         ];
 
-        const usData = [
-            { symbol: 'CRM', price: '510.10', change: '-9.36%', color: 'red' },
-            { symbol: 'AAPL', price: '296.30', change: '+1.91%', color: 'green' },
-            { symbol: 'MSFT', price: '367.04', change: '-6.16%', color: 'red' },
-            { symbol: 'NVDA', price: '208.43', change: '+1.68%', color: 'green' },
-            { symbol: 'GOOGL', price: '349.67', change: '-2.82%', color: 'red' },
-            { symbol: 'AMZN', price: '233.44', change: '-2.29%', color: 'red' },
-            { symbol: 'META', price: '563.41', change: '-0.60%', color: 'red' },
-        ];
+        // Agar aap GitHub Private repo use kar rahe toh PAT token yahan daalo (optional)
+        const GITHUB_TOKEN = ''; // "" rakho agar public repo hai ya URL wala method use kar rahe ho
 
-        // ============================================================
-        // 3. RENDER TICKER
-        // ============================================================
-        function renderTicker(data, containerId) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
+        // ----- Status Check karne wala function -----
+        async function checkAllStatus() {
+            const grid = document.getElementById('projectGrid');
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:rgba(255,255,255,0.5); padding:40px;"><i class="fas fa-spinner fa-spin"></i> Checking status...</div>`;
 
-            let track = container.querySelector('.ticker-track');
-            if (!track) {
-                track = document.createElement('div');
-                track.className = 'ticker-track';
-                container.appendChild(track);
-            }
+            const promises = PROJECTS.map(async (project) => {
+                let status = 'offline';
+                let message = 'Unreachable';
+                let detail = '';
 
-            const itemsHTML = data.map(item => `
-                        <div class="ticker-item">
-                            <span class="symbol">${item.symbol}</span>
-                            <span class="price">${item.price}</span>
-                            <span class="change ${item.color}">${item.change}</span>
-                        </div>
-                    `).join('');
-
-            track.innerHTML = itemsHTML + itemsHTML;
-        }
-
-        renderTicker(nseData, 'tickerNSE');
-        renderTicker(usData, 'tickerUS');
-
-        // ============================================================
-        // 4. SIMULATED REAL-TIME PRICE UPDATE (Every 5 seconds)
-        // ============================================================
-        function updateTickerPrices() {
-            // Update NSE
-            const nseItems = document.querySelectorAll('#tickerNSE .ticker-item');
-            nseItems.forEach((item, index) => {
-                const dataIndex = index % nseData.length;
-                if (dataIndex < nseData.length) {
-                    const priceEl = item.querySelector('.price');
-                    const changeEl = item.querySelector('.change');
-                    if (priceEl && changeEl) {
-                        const currentPrice = parseFloat(priceEl.textContent.replace(/,/g, ''));
-                        if (!isNaN(currentPrice)) {
-                            const drift = (Math.random() - 0.5) * 1.5;
-                            const newPrice = Math.max(0, currentPrice + drift);
-                            priceEl.textContent = newPrice.toFixed(2);
-
-                            const oldChange = parseFloat(changeEl.textContent);
-                            if (!isNaN(oldChange)) {
-                                const newChange = oldChange + (Math.random() - 0.5) * 0.3;
-                                const isPositive = newChange >= 0;
-                                changeEl.textContent = (isPositive ? '+' : '') + newChange.toFixed(2) + '%';
-                                changeEl.className = `change ${isPositive ? 'green' : 'red'}`;
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Update US
-            const usItems = document.querySelectorAll('#tickerUS .ticker-item');
-            usItems.forEach((item, index) => {
-                const dataIndex = index % usData.length;
-                if (dataIndex < usData.length) {
-                    const priceEl = item.querySelector('.price');
-                    const changeEl = item.querySelector('.change');
-                    if (priceEl && changeEl) {
-                        const currentPrice = parseFloat(priceEl.textContent.replace(/,/g, ''));
-                        if (!isNaN(currentPrice)) {
-                            const drift = (Math.random() - 0.5) * 1.0;
-                            const newPrice = Math.max(0, currentPrice + drift);
-                            priceEl.textContent = newPrice.toFixed(2);
-
-                            const oldChange = parseFloat(changeEl.textContent);
-                            if (!isNaN(oldChange)) {
-                                const newChange = oldChange + (Math.random() - 0.5) * 0.2;
-                                const isPositive = newChange >= 0;
-                                changeEl.textContent = (isPositive ? '+' : '') + newChange.toFixed(2) + '%';
-                                changeEl.className = `change ${isPositive ? 'green' : 'red'}`;
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        setInterval(updateTickerPrices, 5000);
-
-        // ============================================================
-        // 5. REAL-TIME NEWS — RSS Feeds (No API Key Required)
-        // ============================================================
-        async function fetchRealTimeNews() {
-            const newsContainer = document.getElementById('newsContainer');
-            const timestampEl = document.getElementById('newsTimestamp');
-            if (!newsContainer) return;
-
-            try {
-                const proxyUrl = 'https://api.rss2json.com/v1/api.json?rss_url=';
-                const feedUrl = encodeURIComponent('https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC,^IXIC,^DJI');
-                const response = await fetch(`${proxyUrl}${feedUrl}`);
-                const data = await response.json();
-
-                if (data && data.items && data.items.length > 0) {
-                    const latestNews = data.items.slice(0, 5);
-                    newsContainer.innerHTML = latestNews.map((item, index) => {
-                        const time = new Date(item.pubDate).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
+                try {
+                    // 1. Pehle URL ping karte hain (agar URL diya hai)
+                    if (project.url && project.url !== 'https://your-api.com/.../health') {
+                        const response = await fetch(project.url, { 
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' },
+                            signal: AbortSignal.timeout(5000) // 5 sec timeout
                         });
-                        const impacts = ['High', 'Medium', 'Medium', 'High', 'Low'];
-                        const impact = impacts[index % impacts.length];
-                        const impactClass = impact.toLowerCase();
-                        const title = item.title.substring(0, 60) + (item.title.length > 60 ? '...' : '');
-                        return `
-                                    <div class="screener-item">
-                                        <span class="name">📰 ${title}</span>
-                                        <span class="score" style="font-size:11px;">
-                                            <span style="color:#4a5568;">${time}</span>
-                                            <span class="impact impact-${impactClass}">${impact}</span>
-                                        </span>
-                                    </div>
-                                `;
-                    }).join('');
-                    if (timestampEl) timestampEl.textContent = new Date().toLocaleTimeString();
-                } else {
-                    renderFallbackNews();
+                        
+                        if (response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            if (data.status === 'ok' || data.status === 'success' || response.status === 200) {
+                                status = 'online';
+                                message = '✅ Running Smoothly';
+                            } else {
+                                status = 'warning';
+                                message = '⚠️ Running but status unknown';
+                            }
+                        } else {
+                            status = 'offline';
+                            message = `❌ HTTP ${response.status}`;
+                        }
+                    } 
+                    // 2. Agar URL nahi diya, toh GitHub Action status check karo (agar repo diya hai)
+                    else if (project.repo && project.repo !== 'your-username/...') {
+                        const apiUrl = `https://api.github.com/repos/${project.repo}/actions/runs?per_page=1`;
+                        const headers = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
+                        const res = await fetch(apiUrl, { headers });
+                        if (res.ok) {
+                            const json = await res.json();
+                            if (json.workflow_runs && json.workflow_runs.length > 0) {
+                                const last = json.workflow_runs[0];
+                                if (last.conclusion === 'success') {
+                                    status = 'online';
+                                    message = '✅ Last build passed';
+                                } else if (last.conclusion === 'failure') {
+                                    status = 'offline';
+                                    message = '❌ Last build failed';
+                                } else {
+                                    status = 'warning';
+                                    message = `⏳ ${last.conclusion}`;
+                                }
+                                detail = `Commit: ${last.head_sha.substring(0,7)}`;
+                            } else {
+                                status = 'warning';
+                                message = '⚠️ No workflow runs';
+                            }
+                        } else {
+                            status = 'offline';
+                            message = '❌ GitHub API error';
+                        }
+                    } else {
+                        // Demo mode - dummy data dikhana (agar kuch configure nahi kiya)
+                        status = 'online';
+                        message = '✅ Demo Mode (Configure URLs)';
+                    }
+
+                } catch (error) {
+                    status = 'offline';
+                    message = '❌ Connection Timeout / Error';
                 }
-            } catch (error) {
-                console.warn('⚠️ RSS fetch failed:', error);
-                renderFallbackNews();
-            }
+
+                // Extra detail (timestamp ya kuch)
+                if (!detail) detail = new Date().toLocaleTimeString();
+
+                return { ...project, status, message, detail };
+            });
+
+            const results = await Promise.all(promises);
+            renderCards(results);
+            document.getElementById('lastUpdated').innerHTML = `<i class="far fa-clock"></i> Last updated: ${new Date().toLocaleString()}`;
         }
 
-        function renderFallbackNews() {
-            const newsContainer = document.getElementById('newsContainer');
-            if (!newsContainer) return;
-            const fallbackNews = [
-                { title: 'Fed signals rate cut in September', time: '14:30', impact: 'High' },
-                { title: 'Nvidia earnings beat estimates', time: '13:15', impact: 'Medium' },
-                { title: 'Oil prices drop on supply concerns', time: '12:45', impact: 'Medium' },
-                { title: 'India GDP growth slows to 6.8%', time: '11:00', impact: 'High' },
-                { title: 'US CPI data due tomorrow', time: '10:30', impact: 'High' },
-            ];
-            newsContainer.innerHTML = fallbackNews.map(item => `
-                        <div class="screener-item">
-                            <span class="name">📰 ${item.title}</span>
-                            <span class="score" style="font-size:11px;">
-                                <span style="color:#4a5568;">${item.time}</span>
-                                <span class="impact impact-${item.impact.toLowerCase()}">${item.impact}</span>
-                            </span>
+        // ----- Cards Render karna -----
+        function renderCards(projects) {
+            const grid = document.getElementById('projectGrid');
+            grid.innerHTML = '';
+
+            projects.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+
+                const statusClass = p.status === 'online' ? 'online' : (p.status === 'warning' ? 'warning' : 'offline');
+                const statusIcon = p.status === 'online' ? 'fa-circle-check' : (p.status === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-xmark');
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas ${p.icon}"></i> ${p.name}
                         </div>
-                    `).join('');
+                        <span class="status-badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${p.status === 'online' ? 'Online' : (p.status === 'warning' ? 'Warning' : 'Offline')}</span>
+                    </div>
+                    <div style="color: #fff; font-size: 15px; font-weight: 500; margin-bottom: 8px;">
+                        ${p.message}
+                    </div>
+                    <div class="card-details">
+                        <div><i class="fas fa-code-fork"></i> Status: ${p.status.toUpperCase()}</div>
+                        <div><i class="fas fa-clock"></i> Detail: ${p.detail || 'N/A'}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
         }
 
-        fetchRealTimeNews();
-        setInterval(fetchRealTimeNews, 120000);
-
-        // ============================================================
-        // 6. ALERT BOT — Add & Remove Alerts
-        // ============================================================
-        const alertList = document.getElementById('alertList');
-        const addAlertBtn = document.getElementById('addAlertBtn');
-
-        addAlertBtn.addEventListener('click', () => {
-            const symbol = document.getElementById('alertSymbol').value.trim();
-            const condition = document.getElementById('alertCondition').value;
-            const price = document.getElementById('alertPrice').value;
-            if (!symbol || !price) return;
-            const id = Date.now();
-            const div = document.createElement('div');
-            div.className = 'alert-item';
-            div.innerHTML =
-                `<span>${symbol} ${condition} ${price}</span><span class="remove" data-id="${id}">✕</span>`;
-            alertList.appendChild(div);
-            document.getElementById('alertSymbol').value = '';
-            document.getElementById('alertPrice').value = '';
-            document.getElementById('alertLastCheck').textContent = new Date().toLocaleTimeString();
-        });
-
-        alertList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove')) {
-                e.target.parentElement.remove();
-                document.getElementById('alertLastCheck').textContent = new Date().toLocaleTimeString();
-            }
-        });
-
-        // ============================================================
-        // 7. STATUS BAR — Last Check Update
-        // ============================================================
-        setInterval(() => {
-            document.getElementById('alertLastCheck').textContent = new Date().toLocaleTimeString();
-        }, 30000);
-
-        // ============================================================
-        // 8. LOG — Dashboard Ready
-        // ============================================================
-        console.log('🚀 SPRZONES Dashboard Live!');
-        console.log('📊 PEAD Agent: Connected to GitHub');
-        console.log('✅ Ticker: NSE (' + nseData.length + ' stocks) | US (' + usData.length + ' stocks)');
-        console.log('✅ Real-Time News: RSS feed (updates every 2 min)');
-        console.log('ℹ️ PEAD data refreshes automatically every 5 minutes');
-        console.log('ℹ️ Ticker scrolls continuously, pause on hover.');
+        // ----- Page Load pe automatically check karo -----
+        window.onload = function() {
+            checkAllStatus();
+            // Har 60 seconds mein auto-refresh
+            setInterval(checkAllStatus, 60000);
+        };
     </script>
 
 </body>
