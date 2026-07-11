@@ -30,42 +30,44 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS - LIGHTER BACKGROUND & LARGER FONTS
+# CUSTOM CSS - OFF-WHITE BACKGROUND & LARGER FONTS
 # ============================================
 st.markdown("""
 <style>
-    /* Main background - lighter */
+    /* Main background - off-white */
     .stApp {
-        background-color: #1a1f2e;
-        color: #e8edf5;
+        background-color: #f5f0e8;
+        color: #1a1a2e;
     }
     
     /* Main content area */
     .main > div {
-        background-color: #1a1f2e;
+        background-color: #f5f0e8;
     }
     
-    /* Sidebar - lighter */
+    /* Sidebar - slightly darker off-white */
     .css-1d391kg {
-        background-color: #232838;
+        background-color: #e8e0d8;
     }
     
-    /* Cards - lighter */
+    /* Cards - off-white with shadow */
     .metric-card {
-        background-color: #232838;
-        border-radius: 10px;
+        background-color: #ffffff;
+        border-radius: 12px;
         padding: 18px;
-        border: 1px solid #3a4055;
+        border: 1px solid #d4cdc5;
         margin: 5px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     .metric-card:hover {
-        border-color: #5a6080;
+        border-color: #b0a8a0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
         transition: 0.3s;
     }
     
-    /* Headers - larger */
+    /* Headers - dark */
     h1, h2, h3, h4, h5, h6 {
-        color: #e8edf5 !important;
+        color: #1a1a2e !important;
         font-weight: 600 !important;
     }
     h1 { font-size: 2.5rem !important; }
@@ -73,60 +75,64 @@ st.markdown("""
     h3 { font-size: 1.6rem !important; }
     h4 { font-size: 1.3rem !important; }
     
-    /* Metric labels - larger */
+    /* Metric labels */
     .stMetricLabel {
         font-size: 1.1rem !important;
-        color: #a0aec0 !important;
+        color: #4a4a5e !important;
     }
     .stMetricValue {
         font-size: 2.2rem !important;
         font-weight: 600 !important;
+        color: #1a1a2e !important;
     }
     .stMetricDelta {
         font-size: 1.1rem !important;
     }
     
-    /* Signal text - larger */
+    /* Signal text */
     .signal-buy {
-        color: #00ff88;
+        color: #00aa66;
         font-weight: bold;
         font-size: 32px;
     }
     .signal-sell {
-        color: #ff4444;
+        color: #cc3333;
         font-weight: bold;
         font-size: 32px;
     }
     .signal-hold {
-        color: #ffaa00;
+        color: #cc8800;
         font-weight: bold;
         font-size: 32px;
     }
     
-    /* Dataframe text */
+    /* Dataframe */
     .dataframe {
         font-size: 1rem !important;
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
     }
     .dataframe td, .dataframe th {
-        padding: 8px 12px !important;
+        padding: 10px 14px !important;
+        border-color: #d4cdc5 !important;
     }
     
     /* Caption text */
     .stCaption {
         font-size: 0.95rem !important;
-        color: #8892a8 !important;
+        color: #6a6a7e !important;
     }
     
     /* Section headers */
     .section-header {
-        border-bottom: 2px solid #3a4055;
+        border-bottom: 2px solid #d4cdc5;
         padding-bottom: 12px;
         margin-bottom: 24px;
     }
     
     /* Live indicator */
     .live-indicator {
-        color: #ff4444;
+        color: #cc3333;
         animation: blink 1s infinite;
         font-size: 1.1rem;
     }
@@ -138,16 +144,25 @@ st.markdown("""
     
     /* News styling */
     .news-bullish {
-        color: #00ff88;
+        color: #00aa66;
         font-weight: 600;
     }
     .news-bearish {
-        color: #ff4444;
+        color: #cc3333;
         font-weight: 600;
     }
     .news-neutral {
-        color: #ffaa00;
+        color: #cc8800;
         font-weight: 600;
+    }
+    
+    /* News item container */
+    .news-item {
+        padding: 12px;
+        border-bottom: 1px solid #d4cdc5;
+        background-color: #ffffff;
+        border-radius: 8px;
+        margin: 5px 0;
     }
     
     /* Scrollbar */
@@ -156,48 +171,96 @@ st.markdown("""
         height: 8px;
     }
     ::-webkit-scrollbar-track {
-        background: #1a1f2e;
+        background: #e8e0d8;
     }
     ::-webkit-scrollbar-thumb {
-        background: #3a4055;
+        background: #c0b8b0;
         border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: #5a6080;
+        background: #a8a098;
     }
     
     /* Expander header */
     .streamlit-expanderHeader {
         font-size: 1.1rem !important;
         font-weight: 600 !important;
-        color: #e8edf5 !important;
+        color: #1a1a2e !important;
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        border: 1px solid #d4cdc5 !important;
+    }
+    .streamlit-expanderContent {
+        background-color: #faf8f5 !important;
+        border-radius: 0 0 8px 8px !important;
+        border: 1px solid #d4cdc5 !important;
+        border-top: none !important;
     }
     
     /* Button styling */
     .stButton button {
         font-size: 1rem !important;
         font-weight: 600 !important;
-        background-color: #2d3748 !important;
-        color: #e8edf5 !important;
+        background-color: #1a1a2e !important;
+        color: #f5f0e8 !important;
         border-radius: 8px !important;
         padding: 10px 20px !important;
+        border: none !important;
     }
     .stButton button:hover {
-        background-color: #3a4055 !important;
-        border-color: #5a6080 !important;
+        background-color: #2a2a4e !important;
     }
     
     /* Selectbox and inputs */
     .stSelectbox, .stMultiSelect, .stSlider {
         font-size: 1rem !important;
     }
+    .stSelectbox > div, .stMultiSelect > div {
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        border: 1px solid #d4cdc5 !important;
+    }
     
     /* Progress bar */
     .stProgress > div {
-        background-color: #2d3748 !important;
+        background-color: #e8e0d8 !important;
+        border-radius: 8px !important;
     }
     .stProgress > div > div {
-        background-color: #00ff88 !important;
+        background-color: #00aa66 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Sidebar text */
+    .css-1d391kg .stCaption {
+        color: #4a4a5e !important;
+    }
+    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4 {
+        color: #1a1a2e !important;
+    }
+    
+    /* Info and warning boxes */
+    .stAlert {
+        border-radius: 8px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d4cdc5 !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #ffffff !important;
+        border-radius: 8px 8px 0 0 !important;
+        border: 1px solid #d4cdc5 !important;
+        border-bottom: none !important;
+        padding: 10px 20px !important;
+        color: #1a1a2e !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1a1a2e !important;
+        color: #f5f0e8 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -391,7 +454,7 @@ else:
     st.info("📡 No live data available. Showing simulated data.")
 
 # ============================================
-# GENERATE SAMPLE DATA WITH TECHNICAL INDICATORS - FIXED
+# GENERATE SAMPLE DATA WITH TECHNICAL INDICATORS
 # ============================================
 @st.cache_data(ttl=60)
 def generate_sample_data():
@@ -458,7 +521,7 @@ def generate_sample_data():
     data.loc[60:65, 'close'] -= 12
     data.loc[80:85, 'volume'] *= 3
     
-    # FIX: Use ffill() and bfill() instead of fillna(method='ffill')
+    # Fill NaN values
     data = data.ffill().bfill()
     
     return data
@@ -616,14 +679,14 @@ if show_news:
                 impact_emoji = "🔴" if item['impact'] == 'High' else "🟡" if item['impact'] == 'Medium' else "🟢"
                 
                 st.markdown(f"""
-                <div style="padding: 12px; border-bottom: 1px solid #3a4055; background-color: #1a1f2e; border-radius: 5px; margin: 5px 0;">
+                <div class="news-item">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600; font-size: 1rem;">{item['time']}</span>
-                        <span style="color: #8892a8; font-size: 0.95rem;">{item['source']}</span>
+                        <span style="font-weight: 600; font-size: 1rem; color: #1a1a2e;">{item['time']}</span>
+                        <span style="color: #6a6a7e; font-size: 0.95rem;">{item['source']}</span>
                         <span class="{sentiment_color}" style="font-size: 1rem;">{item['sentiment']}</span>
                         <span style="font-size: 1rem;">{impact_emoji} {item['impact']}</span>
                     </div>
-                    <div style="margin-top: 8px; font-size: 1.05rem;">{item['title']}</div>
+                    <div style="margin-top: 8px; font-size: 1.05rem; color: #1a1a2e;">{item['title']}</div>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -637,7 +700,7 @@ if show_news:
 st.divider()
 
 # ============================================
-# SECTION 4: ACTIVE STOCK MONITOR
+# SECTION 4: ACTIVE STOCK MONITOR - FIXED
 # ============================================
 st.header("📈 Active Stock Monitor")
 st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
@@ -652,32 +715,49 @@ if assets:
     live_stock_data = get_live_stock_data(assets)
     
     if not live_stock_data.empty:
+        # Add signal and target columns
         live_stock_data['Signal'] = np.random.choice(["BUY", "HOLD", "SELL"], size=len(live_stock_data), p=[0.4, 0.4, 0.2])
         live_stock_data['Model Target'] = live_stock_data['price'] * (1 + np.random.uniform(-0.08, 0.12, size=len(live_stock_data)))
         
+        # Define styling functions
         def color_change(val):
             if val > 0:
-                return 'color: #00ff88; font-weight: 600'
+                return 'color: #00aa66; font-weight: 600'
             elif val < 0:
-                return 'color: #ff4444; font-weight: 600'
-            return 'color: #ffffff'
+                return 'color: #cc3333; font-weight: 600'
+            return 'color: #1a1a2e'
         
         def color_signal(val):
             if val == 'BUY':
-                return 'color: #00ff88; font-weight: bold; font-size: 1.05rem'
+                return 'color: #00aa66; font-weight: bold; font-size: 1.05rem'
             elif val == 'SELL':
-                return 'color: #ff4444; font-weight: bold; font-size: 1.05rem'
-            return 'color: #ffaa00; font-weight: bold; font-size: 1.05rem'
+                return 'color: #cc3333; font-weight: bold; font-size: 1.05rem'
+            return 'color: #cc8800; font-weight: bold; font-size: 1.05rem'
         
-        styled_df = live_stock_data.style.map(color_change, subset=['change_percent'])
+        # FIX: Select columns FIRST, then apply styling
+        display_df = live_stock_data[['symbol', 'price', 'change_percent', 'volume', 'Signal', 'Model Target']].copy()
+        
+        # Apply styling to the display dataframe
+        styled_df = display_df.style.map(color_change, subset=['change_percent'])
         styled_df = styled_df.map(color_signal, subset=['Signal'])
         
-        st.dataframe(
-            styled_df[['symbol', 'price', 'change_percent', 'volume', 'Signal', 'Model Target']],
-            width='stretch',
-            height=350
-        )
+        # Display the styled dataframe
+        st.dataframe(styled_df, width='stretch', height=350)
+        
+        # Quick stats
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            buy_count = len(live_stock_data[live_stock_data['Signal'] == 'BUY'])
+            st.metric("BUY Signals", buy_count, f"{buy_count/len(assets)*100:.0f}% of assets")
+        with col2:
+            avg_change = live_stock_data['change_percent'].mean()
+            st.metric("Avg Change", f"{avg_change:.2f}%", delta=f"{avg_change:.2f}%")
+        with col3:
+            # Calculate target accuracy
+            target_accuracy = ((live_stock_data['price'] < live_stock_data['Model Target']) * 1).mean() * 100
+            st.metric("Target Accuracy", f"{target_accuracy:.0f}%", "Model vs Actual")
     else:
+        # Fallback simulated data
         stock_data = []
         for asset in assets:
             base_price = np.random.uniform(200, 2500)
@@ -695,17 +775,17 @@ if assets:
         
         def color_change(val):
             if val > 0:
-                return 'color: #00ff88; font-weight: 600'
+                return 'color: #00aa66; font-weight: 600'
             elif val < 0:
-                return 'color: #ff4444; font-weight: 600'
-            return 'color: #ffffff'
+                return 'color: #cc3333; font-weight: 600'
+            return 'color: #1a1a2e'
         
         def color_signal(val):
             if val == 'BUY':
-                return 'color: #00ff88; font-weight: bold; font-size: 1.05rem'
+                return 'color: #00aa66; font-weight: bold; font-size: 1.05rem'
             elif val == 'SELL':
-                return 'color: #ff4444; font-weight: bold; font-size: 1.05rem'
-            return 'color: #ffaa00; font-weight: bold; font-size: 1.05rem'
+                return 'color: #cc3333; font-weight: bold; font-size: 1.05rem'
+            return 'color: #cc8800; font-weight: bold; font-size: 1.05rem'
         
         styled_df = stock_df.style.map(color_change, subset=['Change %'])
         styled_df = styled_df.map(color_signal, subset=['Signal'])
@@ -749,20 +829,39 @@ if show_backtest:
                 y=equity_df['equity'],
                 mode='lines', 
                 name='Equity',
-                line=dict(color='#00ff88', width=2)
+                line=dict(color='#00aa66', width=2)
             ))
-            fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#ff4444", annotation_text="Initial Capital")
+            fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#cc3333", annotation_text="Initial Capital")
             fig.update_layout(
-                template="plotly_dark", 
+                template="plotly_white", 
                 height=400, 
                 title="Equity Curve",
                 xaxis_title="Date" if 'date' in equity_df.columns else "Trade #",
                 yaxis_title="Capital ($)",
-                font=dict(size=14)
+                font=dict(size=14, color="#1a1a2e"),
+                plot_bgcolor="#ffffff",
+                paper_bgcolor="#f5f0e8"
             )
             st.plotly_chart(fig, width='stretch')
         else:
             st.info("📈 Equity curve data not available")
+        
+        if show_advanced:
+            with st.expander("📊 Advanced Metrics", expanded=False):
+                metrics_col1, metrics_col2 = st.columns(2)
+                with metrics_col1:
+                    st.metric("Total Trades", results.get('total_trades', 0))
+                    st.metric("CAGR", f"{results.get('cagr', 0):.2f}%")
+                    st.metric("Sortino Ratio", f"{results.get('sortino_ratio', 0):.2f}")
+                with metrics_col2:
+                    if results.get('trades'):
+                        wins = [t['pnl'] for t in results['trades'] if t['pnl'] > 0]
+                        losses = [abs(t['pnl']) for t in results['trades'] if t['pnl'] < 0]
+                        avg_win = np.mean(wins) if wins else 0
+                        avg_loss = np.mean(losses) if losses else 0
+                        st.metric("Avg Win", f"${avg_win:.2f}")
+                        st.metric("Avg Loss", f"${avg_loss:.2f}")
+                        st.metric("Risk/Reward", f"{(avg_win/avg_loss):.2f}" if avg_loss > 0 else "∞")
         
     except Exception as e:
         st.error(f"❌ Backtest error: {e}")
@@ -795,7 +894,13 @@ if show_correlation:
                     zmin=-1,
                     zmax=1
                 )
-                fig.update_layout(template="plotly_dark", height=400, font=dict(size=14))
+                fig.update_layout(
+                    template="plotly_white", 
+                    height=400, 
+                    font=dict(size=14, color="#1a1a2e"),
+                    plot_bgcolor="#ffffff",
+                    paper_bgcolor="#f5f0e8"
+                )
                 st.plotly_chart(fig, width='stretch')
             else:
                 st.info("📊 Not enough data for correlation analysis")
@@ -816,7 +921,13 @@ if show_correlation:
                 zmin=-1,
                 zmax=1
             )
-            fig.update_layout(template="plotly_dark", height=400, font=dict(size=14))
+            fig.update_layout(
+                template="plotly_white", 
+                height=400, 
+                font=dict(size=14, color="#1a1a2e"),
+                plot_bgcolor="#ffffff",
+                paper_bgcolor="#f5f0e8"
+            )
             st.plotly_chart(fig, width='stretch')
 
 # ============================================
