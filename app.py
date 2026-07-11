@@ -299,8 +299,10 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
 
     # ---------- 1. Yahoo Finance ----------
     try:
-        # Use yfinance directly (no session to avoid issues)
-        df = yf.download(symbol, period=period, interval=interval, progress=False)
+        # Use yfinance with a custom session
+        session = requests.Session()
+        session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'})
+        df = yf.download(symbol, period=period, interval=interval, progress=False, session=session)
         if not df.empty and len(df) > 1:
             df.columns = [col.capitalize() if col.lower() != 'volume' else 'Volume' for col in df.columns]
             if debug: st.sidebar.info(f"✅ Yahoo: {symbol}")
@@ -459,6 +461,128 @@ def get_currency(symbol):
     else:
         return "$"
 
+def add_technicals(df):
+    df = df.copy()
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df['rsi'] = 100 - (100 / (1 + rs))
+    exp1 = df['close'].ewm(span=12, adjust=False).mean()
+    exp2 = df['close'].ewm(span=26, adjust=False).mean()
+    df['macd'] = exp1 - exp2
+    df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+    sma = df['close'].rolling(window=20).mean()
+    std = df['close'].rolling(window=20).std()
+    df['bb_upper'] = sma + (std * 2)
+    df['bb_lower'] = sma - (std * 2)
+    df['ema_9'] = df['close'].ewm(span=9, adjust=False).mean()
+    df['ema_21'] = df['close'].ewm(span=21, adjust=False).mean()
+    df['sma_50'] = df['close'].rolling(window=50).mean()
+    df['sma_200'] = df['close'].rolling(window=200).mean()
+    df['volume_change'] = df['volume'].pct_change()
+    df['vwap'] = (df['volume'] * (df['high'] + df['low'] + df['close']) / 3).cumsum() / df['volume'].cumsum()
+    df = df.ffill().bfill()
+    return df
+
+def detect_bullish_patterns(df):
+    if len(df) < 3:
+        return []
+    patterns = []
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    prev2 = df.iloc[-3] if len(df) >= 3 else None
+
+    body = last['Close'] - last['Open']
+    upper_shadow = last['High'] - max(last['Close'], last['Open'])
+    lower_shadow = min(last['Close'], last['Open']) - last['Low']
+    body_prev = prev['Close'] - prev['Open']
+
+    if body > 0 and body_prev < 0 and last['Close'] > prev['Open'] and last['Open'] < prev['Close']:
+        patterns.append("Bullish Engulfing")
+    if abs(body) < 0.1 * (last['High'] - last['Low']) and lower_shadow > 2 * abs(body) and upper_shadow < 0.1 * (last['High'] - last['Low']):
+        patterns.append("Hammer")
+    if abs(body) < 0.05 * (last['High'] - last['Low']) and lower_shadow > 3 * abs(body) and upper_shadow < 0.1 * (last['High'] - last['Low']):
+        patterns.append("Dragonfly Doji")
+    if prev2 is not None:
+        if prev2['Close'] < prev2['Open'] and prev['Close'] < prev['Open'] and body > 0 and last['Close'] > (prev['Open'] + prev['Close'])/2:
+            patterns.append("Morning Star")
+    if body > 0 and body_prev < 0 and last['High'] < prev['Open'] and last['Low'] > prev['Close']:
+        patterns.append("Bullish Harami")
+    if body > 0 and body_prev < 0 and last['Open'] < prev['Close'] and last['Close'] > (prev['Open'] + prev['Close'])/2 and last['Close'] < prev['Open']:
+        patterns.append("Piercing Line")
+    return patterns
+
+def calculate_strength(price, ema, vol_ratio, rsi, macd_hist, patterns, fund_strong):
+    score = 0
+    if price > ema * 1.02:
+        score += 20
+    elif price > ema * 1.01:
+        score += 10
+    if vol_ratio > 2.0:
+        score += 20
+    elif vol_ratio > 1.5:
+        score += 10
+    if 50 <= rsi <= 70:
+        score += 15
+    elif rsi > 70:
+        score += 5
+    if macd_hist > 0:
+        score += 15
+    score += min(len(patterns) * 5, 20)
+    if fund_strong:
+        score += 10
+    return min(score, 100)
+
+def get_sector_heatmap():
+    """Fetch sector data for Indian stocks and return DataFrame for heatmap."""
+    stock_sectors = {
+        "RELIANCE": "Energy",
+        "TCS": "Technology",
+        "INFY": "Technology",
+        "HDFCBANK": "Financial",
+        "ICICIBANK": "Financial",
+        "HINDUNILVR": "Consumer",
+        "ITC": "Consumer",
+        "SBIN": "Financial",
+        "BHARTIARTL": "Telecom",
+        "KOTAKBANK": "Financial",
+        "LT": "Construction",
+        "AXISBANK": "Financial",
+        "HCLTECH": "Technology",
+        "ASIANPAINT": "Consumer",
+        "MARUTI": "Auto",
+        "SUNPHARMA": "Pharma",
+        "TITAN": "Consumer",
+        "WIPRO": "Technology",
+        "ULTRACEMCO": "Construction",
+        "BAJFINANCE": "Financial",
+        "ADANIPORTS": "Transport",
+        "NTPC": "Energy",
+        "POWERGRID": "Energy",
+        "M&M": "Auto",
+        "TECHM": "Technology",
+        "JSWSTEEL": "Metals",
+        "TATAMOTORS": "Auto",
+        "TATASTEEL": "Metals",
+        "HAL": "Aerospace"
+    }
+    data = []
+    for symbol, sector in stock_sectors.items():
+        try:
+            ticker = symbol + ".NS"
+            df, _ = get_price_data(ticker, period="5d", interval="1d", debug=False)
+            if not df.empty:
+                price = df['Close'].iloc[-1]
+                change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0] * 100
+                data.append({"Symbol": symbol, "Sector": sector, "Price": price, "Change %": change})
+        except:
+            continue
+    df_sector = pd.DataFrame(data)
+    if not df_sector.empty:
+        df_sector['Change %'] = pd.to_numeric(df_sector['Change %'], errors='coerce')
+    return df_sector
+
 # ============================================
 # AGENT INITIALISATION
 # ============================================
@@ -487,7 +611,7 @@ indices = {
     "DOW": "^DJI",
     "BTC-USD": "BTC-USD",
     "ETH-USD": "ETH-USD",
-    "XAUUSD": "GC=F"
+    "XAUUSD": "GC=F"   # Gold futures (spot price around 2400)
 }
 
 # Display data source status in sidebar
