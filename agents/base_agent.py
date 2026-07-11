@@ -12,8 +12,9 @@ class BaseAgent(ABC):
         self.name = name
         self.model_path = model_path
         self.model = None
-        self.load_model()
-        
+        # DON'T auto-load here - let subclasses handle it with proper initialization
+        # self.load_model()  # REMOVED - causes attribute errors in subclasses
+    
     @abstractmethod
     def load_model(self):
         """Load the pre-trained model"""
