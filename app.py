@@ -357,7 +357,8 @@ with col4:
     weights = moderator_result.get('agent_weights', {})
     if weights:
         for agent, weight in weights.items():
-            st.progress(weight/100, text=f"{agent}: {weight}%")
+            # FIX: Convert to float to avoid float32 type error
+            st.progress(float(weight/100), text=f"{agent}: {weight}%")
     else:
         st.info("No weights available")
     st.markdown("</div>", unsafe_allow_html=True)
