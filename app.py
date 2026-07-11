@@ -234,6 +234,24 @@ st.markdown(f"""
         border-radius: 10px;
         background: linear-gradient(to right, #cc3333, #ffaa00, #00aa66);
     }}
+    .data-status {{
+        font-size: 0.85rem;
+        padding: 5px;
+        border-radius: 5px;
+        margin: 2px 0;
+    }}
+    .status-success {{
+        background-color: #d1fae5;
+        color: #065f46;
+    }}
+    .status-warning {{
+        background-color: #fef3c7;
+        color: #92400e;
+    }}
+    .status-error {{
+        background-color: #fee2e2;
+        color: #991b1b;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -252,7 +270,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# DATA SOURCE CONFIG (Sidebar with debug)
+# DATA SOURCE CONFIG (Sidebar with debug & status)
 # ============================================
 st.sidebar.markdown("### ⚙️ Data Sources")
 try:
@@ -268,24 +286,25 @@ except:
 debug = st.sidebar.checkbox("Show debug info", value=False)
 
 # ============================================
-# ROBUST DATA FETCHER – with detailed error reporting
+# ROBUST DATA FETCHER – with detailed error reporting & status
 # ============================================
 @st.cache_data(ttl=300)
 def get_price_data(symbol, period="1d", interval="1d", debug=False):
     """
     Try: Yahoo Finance → Twelve Data → Alpha Vantage → Simulated (symbol-specific)
-    Returns DataFrame with OHLCV.
+    Returns DataFrame with OHLCV. Also returns a status message.
     """
     messages = []
+    status = "unknown"
+
     # ---------- 1. Yahoo Finance ----------
     try:
-        session = requests.Session()
-        session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
-        df = yf.download(symbol, period=period, interval=interval, progress=False, session=session)
+        # Use yfinance directly (no session to avoid issues)
+        df = yf.download(symbol, period=period, interval=interval, progress=False)
         if not df.empty and len(df) > 1:
             df.columns = [col.capitalize() if col.lower() != 'volume' else 'Volume' for col in df.columns]
             if debug: st.sidebar.info(f"✅ Yahoo: {symbol}")
-            return df
+            return df, "Yahoo Finance"
         else:
             messages.append("Yahoo returned empty")
     except Exception as e:
@@ -327,7 +346,7 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
                 days = {'1d':1,'5d':5,'10d':10,'1mo':30}.get(period, 30)
                 df = df.tail(days)
             if debug: st.sidebar.info(f"✅ Twelve Data: {symbol}")
-            return df
+            return df, "Twelve Data"
         else:
             messages.append("TD no values")
     except Exception as e:
@@ -384,15 +403,15 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
                         days = {'1d':1,'5d':5,'10d':10,'1mo':30}.get(period, 30)
                         df = df.tail(days * 24 if interval in ['1m','5m','15m','30m','1h'] else days)
                     if debug: st.sidebar.info(f"✅ Alpha Vantage: {symbol}")
-                    return df
+                    return df, "Alpha Vantage"
                 else:
                     messages.append("AV response missing time series")
         except Exception as e:
             messages.append(f"AV error: {e}")
 
-    # ---------- 4. Final fallback: Simulated data ----------
+    # ---------- 4. Final fallback: Simulated data (clearly labelled) ----------
     if debug:
-        st.sidebar.warning(f"⚠️ Using simulated data for {symbol}")
+        st.sidebar.warning(f"⚠️ Using SIMULATED data for {symbol}")
         for msg in messages:
             st.sidebar.text(msg)
     seed = hash(symbol) % 10000
@@ -409,16 +428,16 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
     df = pd.DataFrame({
         'Open': open_, 'High': high, 'Low': low, 'Close': close, 'Volume': volume
     }, index=dates)
-    return df
+    return df, "SIMULATED (fallback)"
 
 # ============================================
 # HELPER FUNCTIONS
 # ============================================
 def get_ohlc(symbol):
-    """Return a dict with current OHLC and change %."""
-    df = get_price_data(symbol, period="2d", interval="1d", debug=False)
+    """Return a dict with current OHLC, change %, and data source."""
+    df, source = get_price_data(symbol, period="2d", interval="1d", debug=debug)
     if df.empty or len(df) < 2:
-        return None
+        return None, source
     latest = df.iloc[-1]
     prev_close = df.iloc[-2]['Close']
     change = (latest['Close'] - prev_close) / prev_close * 100 if prev_close else 0
@@ -427,130 +446,18 @@ def get_ohlc(symbol):
         'High': latest['High'],
         'Low': latest['Low'],
         'Close': latest['Close'],
-        'Change %': change
-    }
+        'Change %': change,
+        'Source': source
+    }, source
 
-def add_technicals(df):
-    df = df.copy()
-    delta = df['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df['rsi'] = 100 - (100 / (1 + rs))
-    exp1 = df['close'].ewm(span=12, adjust=False).mean()
-    exp2 = df['close'].ewm(span=26, adjust=False).mean()
-    df['macd'] = exp1 - exp2
-    df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
-    sma = df['close'].rolling(window=20).mean()
-    std = df['close'].rolling(window=20).std()
-    df['bb_upper'] = sma + (std * 2)
-    df['bb_lower'] = sma - (std * 2)
-    df['ema_9'] = df['close'].ewm(span=9, adjust=False).mean()
-    df['ema_21'] = df['close'].ewm(span=21, adjust=False).mean()
-    df['sma_50'] = df['close'].rolling(window=50).mean()
-    df['sma_200'] = df['close'].rolling(window=200).mean()
-    df['volume_change'] = df['volume'].pct_change()
-    df['vwap'] = (df['volume'] * (df['high'] + df['low'] + df['close']) / 3).cumsum() / df['volume'].cumsum()
-    df = df.ffill().bfill()
-    return df
-
-def detect_bullish_patterns(df):
-    if len(df) < 3:
-        return []
-    patterns = []
-    last = df.iloc[-1]
-    prev = df.iloc[-2]
-    prev2 = df.iloc[-3] if len(df) >= 3 else None
-
-    body = last['Close'] - last['Open']
-    upper_shadow = last['High'] - max(last['Close'], last['Open'])
-    lower_shadow = min(last['Close'], last['Open']) - last['Low']
-    body_prev = prev['Close'] - prev['Open']
-
-    if body > 0 and body_prev < 0 and last['Close'] > prev['Open'] and last['Open'] < prev['Close']:
-        patterns.append("Bullish Engulfing")
-    if abs(body) < 0.1 * (last['High'] - last['Low']) and lower_shadow > 2 * abs(body) and upper_shadow < 0.1 * (last['High'] - last['Low']):
-        patterns.append("Hammer")
-    if abs(body) < 0.05 * (last['High'] - last['Low']) and lower_shadow > 3 * abs(body) and upper_shadow < 0.1 * (last['High'] - last['Low']):
-        patterns.append("Dragonfly Doji")
-    if prev2 is not None:
-        if prev2['Close'] < prev2['Open'] and prev['Close'] < prev['Open'] and body > 0 and last['Close'] > (prev['Open'] + prev['Close'])/2:
-            patterns.append("Morning Star")
-    if body > 0 and body_prev < 0 and last['High'] < prev['Open'] and last['Low'] > prev['Close']:
-        patterns.append("Bullish Harami")
-    if body > 0 and body_prev < 0 and last['Open'] < prev['Close'] and last['Close'] > (prev['Open'] + prev['Close'])/2 and last['Close'] < prev['Open']:
-        patterns.append("Piercing Line")
-    return patterns
-
-def calculate_strength(price, ema, vol_ratio, rsi, macd_hist, patterns, fund_strong):
-    score = 0
-    if price > ema * 1.02:
-        score += 20
-    elif price > ema * 1.01:
-        score += 10
-    if vol_ratio > 2.0:
-        score += 20
-    elif vol_ratio > 1.5:
-        score += 10
-    if 50 <= rsi <= 70:
-        score += 15
-    elif rsi > 70:
-        score += 5
-    if macd_hist > 0:
-        score += 15
-    score += min(len(patterns) * 5, 20)
-    if fund_strong:
-        score += 10
-    return min(score, 100)
-
-def get_sector_heatmap():
-    stock_sectors = {
-        "RELIANCE": "Energy",
-        "TCS": "Technology",
-        "INFY": "Technology",
-        "HDFCBANK": "Financial",
-        "ICICIBANK": "Financial",
-        "HINDUNILVR": "Consumer",
-        "ITC": "Consumer",
-        "SBIN": "Financial",
-        "BHARTIARTL": "Telecom",
-        "KOTAKBANK": "Financial",
-        "LT": "Construction",
-        "AXISBANK": "Financial",
-        "HCLTECH": "Technology",
-        "ASIANPAINT": "Consumer",
-        "MARUTI": "Auto",
-        "SUNPHARMA": "Pharma",
-        "TITAN": "Consumer",
-        "WIPRO": "Technology",
-        "ULTRACEMCO": "Construction",
-        "BAJFINANCE": "Financial",
-        "ADANIPORTS": "Transport",
-        "NTPC": "Energy",
-        "POWERGRID": "Energy",
-        "M&M": "Auto",
-        "TECHM": "Technology",
-        "JSWSTEEL": "Metals",
-        "TATAMOTORS": "Auto",   # This may fail, but we handle it
-        "TATASTEEL": "Metals",
-        "HAL": "Aerospace"
-    }
-    data = []
-    for symbol, sector in stock_sectors.items():
-        try:
-            ticker = symbol + ".NS"
-            df = get_price_data(ticker, period="5d", interval="1d", debug=False)
-            if not df.empty:
-                price = df['Close'].iloc[-1]
-                change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0] * 100
-                data.append({"Symbol": symbol, "Sector": sector, "Price": price, "Change %": change})
-        except:
-            # Silently skip symbols that fail (like TATAMOTORS)
-            continue
-    df_sector = pd.DataFrame(data)
-    if not df_sector.empty:
-        df_sector['Change %'] = pd.to_numeric(df_sector['Change %'], errors='coerce')
-    return df_sector
+def get_currency(symbol):
+    """Return currency symbol based on asset."""
+    if symbol in ["^NSEI", "^BSESN", "NIFTY 50", "SENSEX"]:
+        return "₹"
+    elif symbol in ["BTC-USD", "ETH-USD", "GC=F"]:
+        return "$"  # crypto and gold are quoted in USD
+    else:
+        return "$"
 
 # ============================================
 # AGENT INITIALISATION
@@ -569,7 +476,7 @@ def init_agents():
 bull_agent, bear_agent, moderator_agent = init_agents()
 
 # ============================================
-# GLOBAL INDICES with OHLC expander
+# GLOBAL INDICES with OHLC expander & currency
 # ============================================
 st.markdown("### 🌍 Global Indices")
 indices = {
@@ -583,33 +490,50 @@ indices = {
     "XAUUSD": "GC=F"
 }
 
+# Display data source status in sidebar
+status_msgs = []
 cols = st.columns(len(indices))
 for i, (name, ticker) in enumerate(indices.items()):
-    ohlc = get_ohlc(ticker)
+    ohlc, source = get_ohlc(ticker)
     if ohlc:
         price = ohlc['Close']
         change = ohlc['Change %']
-        cols[i].metric(name, f"{price:,.2f}", f"{change:+.2f}%", delta_color="normal")
+        currency = get_currency(ticker)
+        cols[i].metric(name, f"{currency}{price:,.2f}", f"{change:+.2f}%", delta_color="normal")
+        status_msgs.append(f"{name}: {source}")
     else:
         cols[i].metric(name, "N/A", "N/A")
+        status_msgs.append(f"{name}: No data")
+
+# Show data source status in sidebar
+if debug:
+    st.sidebar.markdown("### 📡 Data Source Status")
+    for msg in status_msgs:
+        if "SIMULATED" in msg:
+            st.sidebar.markdown(f"<div class='data-status status-error'>{msg}</div>", unsafe_allow_html=True)
+        elif "Yahoo" in msg or "Twelve" in msg or "Alpha" in msg:
+            st.sidebar.markdown(f"<div class='data-status status-success'>{msg}</div>", unsafe_allow_html=True)
+        else:
+            st.sidebar.markdown(f"<div class='data-status status-warning'>{msg}</div>", unsafe_allow_html=True)
 
 # OHLC details expander
 with st.expander("📊 Detailed OHLC & Change %"):
     ohlc_data = []
     for name, ticker in indices.items():
-        ohlc = get_ohlc(ticker)
+        ohlc, _ = get_ohlc(ticker)
         if ohlc:
+            currency = get_currency(ticker)
             ohlc_data.append({
                 "Index": name,
-                "Open": ohlc['Open'],
-                "High": ohlc['High'],
-                "Low": ohlc['Low'],
-                "Close": ohlc['Close'],
-                "Change %": ohlc['Change %']
+                "Open": f"{currency}{ohlc['Open']:.2f}",
+                "High": f"{currency}{ohlc['High']:.2f}",
+                "Low": f"{currency}{ohlc['Low']:.2f}",
+                "Close": f"{currency}{ohlc['Close']:.2f}",
+                "Change %": f"{ohlc['Change %']:.2f}%"
             })
     if ohlc_data:
         df_ohlc = pd.DataFrame(ohlc_data)
-        st.dataframe(df_ohlc.style.format({'Open':'{:.2f}','High':'{:.2f}','Low':'{:.2f}','Close':'{:.2f}','Change %':'{:.2f}%'}), width='stretch')
+        st.dataframe(df_ohlc, width='stretch')
     else:
         st.info("No OHLC data available.")
 
@@ -674,7 +598,7 @@ with tab2:
                 ticker = asset_input
 
             with st.spinner(f"Fetching data for {ticker}..."):
-                df = get_price_data(ticker, period="1mo", interval="1d", debug=debug)
+                df, _ = get_price_data(ticker, period="1mo", interval="1d", debug=debug)
                 if df.empty:
                     st.error("No data found. Check symbol and market.")
                 else:
@@ -760,7 +684,7 @@ with tab3:
                 try:
                     ticker = sym + ".NS"
                     for tf_label, period, interval in timeframes:
-                        df = get_price_data(ticker, period=period, interval=interval, debug=False)
+                        df, _ = get_price_data(ticker, period=period, interval=interval, debug=False)
                         if df.empty or len(df) < 200:
                             continue
                         if isinstance(df.columns, pd.MultiIndex):
@@ -806,13 +730,13 @@ with tab3:
             else:
                 st.info("No breakouts found with current settings.")
 
-    # Other scanners (US, Forex, Crypto) – simplified for brevity, you can add them similarly.
+    # Other scanners (simplified placeholders)
     with scanner_tabs[1]:
-        st.info("US Stocks scanner – coming soon (you can extend similarly).")
+        st.info("US Stocks scanner – extend using same pattern.")
     with scanner_tabs[2]:
-        st.info("Forex scanner – coming soon.")
+        st.info("Forex scanner – extend using same pattern.")
     with scanner_tabs[3]:
-        st.info("Crypto scanner – coming soon.")
+        st.info("Crypto scanner – extend using same pattern.")
 
     with scanner_tabs[4]:
         st.write("### 📰 PEAD – Post‑Earnings Announcement Drift")
@@ -846,7 +770,7 @@ with tab4:
     backtest_asset = st.text_input("Asset for backtest", "RELIANCE.NS")
     strategy = st.selectbox("Strategy", ["MA Crossover", "RSI", "MACD"])
     if st.button("Run Backtest"):
-        df = get_price_data(backtest_asset, period="1y", interval="1d", debug=False)
+        df, _ = get_price_data(backtest_asset, period="1y", interval="1d", debug=False)
         if df.empty:
             st.error("No data.")
         else:
@@ -892,10 +816,8 @@ with tab5:
     st.subheader("Latest Financial News")
     news_query = st.text_input("Search news (e.g., 'stock market')", "stock market")
     if st.button("Fetch News"):
-        # Simple placeholder – you can integrate NewsAPI
         st.info("News API integration – add your key to secrets.toml as NEWS_API_KEY")
     st.subheader("Economic Calendar")
-    # Placeholder – you can integrate Alpha Vantage calendar endpoint
     st.info("Economic calendar – requires Alpha Vantage key and endpoint integration.")
 
 # ---------- TAB 6: PORTFOLIO OPTIMISATION ----------
@@ -910,12 +832,11 @@ with tab6:
         if st.button("Compute Efficient Frontier"):
             returns_data = {}
             for sym in asset_list:
-                df = get_price_data(sym, period="1y", interval="1d", debug=False)
+                df, _ = get_price_data(sym, period="1y", interval="1d", debug=False)
                 if not df.empty:
                     returns_data[sym] = df['Close'].pct_change().dropna()
             if len(returns_data) >= 2:
                 returns_df = pd.DataFrame(returns_data).dropna()
-                # Simple frontier – using scipy.optimize
                 mu = returns_df.mean() * 252
                 cov = returns_df.cov() * 252
                 n_assets = len(mu)
@@ -923,7 +844,6 @@ with tab6:
                     ret = np.sum(w * mu)
                     vol = np.sqrt(np.dot(w.T, np.dot(cov, w)))
                     return ret, vol
-                # Max Sharpe
                 def neg_sharpe(w):
                     ret, vol = portfolio_stats(w)
                     return -ret/vol
@@ -937,7 +857,6 @@ with tab6:
                     st.write("**Max Sharpe Portfolio Weights:**")
                     for i, sym in enumerate(asset_list):
                         st.write(f"{sym}: {w_opt[i]*100:.1f}%")
-                    # Plot efficient frontier (simplified)
                     frontiers = []
                     target_returns = np.linspace(mu.min(), mu.max(), 20)
                     for tr in target_returns:
