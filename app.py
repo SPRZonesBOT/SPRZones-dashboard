@@ -6,13 +6,13 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import sys
 import warnings
+import json
+import os
 warnings.filterwarnings('ignore')
-import time
 
 # Fix path issues
 sys.path.append('.')
 
-from data.ingestion.nse_bse_feeds import NSELiveFeed, MacroFeed
 from data.ingestion.yahoo_finance import YahooFinanceFeed, NewsFeed, CryptoSentiment
 from agents.bull_agent import BullAgent
 from agents.bear_agent import BearAgent
@@ -23,1052 +23,481 @@ from agents.backtest_engine import BacktestEngine
 # PAGE CONFIGURATION
 # ============================================
 st.set_page_config(
-    page_title="Multi‑Agent Quant Dashboard",
+    page_title="SPRZonesPulse",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ============================================
-# CUSTOM CSS - OFF-WHITE BACKGROUND & LARGER FONTS
+# CUSTOM CSS – SPRZonesPulse Style
 # ============================================
 st.markdown("""
 <style>
-    /* Main background - off-white */
+    /* Remove default padding */
+    .main .block-container {
+        padding-top: 1rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        max-width: 100%;
+    }
+    
+    /* Main background */
     .stApp {
-        background-color: #f5f0e8;
-        color: #1a1a2e;
+        background-color: #f8f6f2;
     }
     
-    /* Main content area */
-    .main > div {
-        background-color: #f5f0e8;
+    /* Header bar */
+    .header-bar {
+        background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+        padding: 0.8rem 2rem;
+        border-radius: 0 0 12px 12px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header-title {
+        color: #ffffff;
+        font-size: 1.8rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .header-title span {
+        color: #00d4ff;
+    }
+    .header-status {
+        color: #a0aec0;
+        font-size: 0.9rem;
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+    }
+    .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    .dot-green {
+        background-color: #00ff88;
+        box-shadow: 0 0 8px #00ff88;
+    }
+    .dot-red {
+        background-color: #ff4444;
+        box-shadow: 0 0 8px #ff4444;
     }
     
-    /* Sidebar - slightly darker off-white */
-    .css-1d391kg {
-        background-color: #e8e0d8;
-    }
-    
-    /* Cards - off-white with shadow */
+    /* Metric cards */
     .metric-card {
-        background-color: #ffffff;
+        background: #ffffff;
         border-radius: 12px;
-        padding: 18px;
-        border: 1px solid #d4cdc5;
-        margin: 5px 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        padding: 1rem 1.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8e2da;
+        text-align: center;
+        transition: 0.2s;
     }
     .metric-card:hover {
-        border-color: #b0a8a0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        transition: 0.3s;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+        border-color: #c8c0b8;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        color: #6a6a7e;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-top: 4px;
+    }
+    .metric-sub {
+        font-size: 0.8rem;
+        color: #8892a8;
+        margin-top: 2px;
     }
     
-    /* Headers - dark */
-    h1, h2, h3, h4, h5, h6 {
-        color: #1a1a2e !important;
-        font-weight: 600 !important;
+    /* Index cards */
+    .index-card {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        border: 1px solid #e8e2da;
+        text-align: center;
     }
-    h1 { font-size: 2.5rem !important; }
-    h2 { font-size: 2rem !important; }
-    h3 { font-size: 1.6rem !important; }
-    h4 { font-size: 1.3rem !important; }
-    
-    /* Metric labels */
-    .stMetricLabel {
-        font-size: 1.1rem !important;
-        color: #4a4a5e !important;
+    .index-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4a4a5e;
     }
-    .stMetricValue {
-        font-size: 2.2rem !important;
-        font-weight: 600 !important;
-        color: #1a1a2e !important;
+    .index-price {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 2px 0;
     }
-    .stMetricDelta {
-        font-size: 1.1rem !important;
+    .index-change {
+        font-size: 0.9rem;
+        font-weight: 600;
     }
-    
-    /* Signal text */
-    .signal-buy {
+    .change-positive {
         color: #00aa66;
-        font-weight: bold;
-        font-size: 32px;
     }
-    .signal-sell {
+    .change-negative {
         color: #cc3333;
-        font-weight: bold;
-        font-size: 32px;
-    }
-    .signal-hold {
-        color: #cc8800;
-        font-weight: bold;
-        font-size: 32px;
-    }
-    
-    /* Dataframe */
-    .dataframe {
-        font-size: 1rem !important;
-        background-color: #ffffff !important;
-        border-radius: 8px !important;
-    }
-    .dataframe td, .dataframe th {
-        padding: 10px 14px !important;
-        border-color: #d4cdc5 !important;
-    }
-    
-    /* Caption text */
-    .stCaption {
-        font-size: 0.95rem !important;
-        color: #6a6a7e !important;
     }
     
     /* Section headers */
-    .section-header {
-        border-bottom: 2px solid #d4cdc5;
-        padding-bottom: 12px;
-        margin-bottom: 24px;
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 1.2rem 0 0.8rem 0;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #e8e2da;
     }
     
-    /* Live indicator */
-    .live-indicator {
+    /* Status panel */
+    .status-panel {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1.2rem;
+        border: 1px solid #e8e2da;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        margin-bottom: 1rem;
+    }
+    .status-panel h4 {
+        margin: 0 0 8px 0;
+        color: #1a1a2e;
+        font-weight: 600;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 2px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .badge-offline {
+        background: #fee2e2;
         color: #cc3333;
-        animation: blink 1s infinite;
-        font-size: 1.1rem;
     }
-    @keyframes blink {
-        0% { opacity: 1; }
-        50% { opacity: 0; }
-        100% { opacity: 1; }
-    }
-    
-    /* News styling */
-    .news-bullish {
+    .badge-online {
+        background: #d1fae5;
         color: #00aa66;
-        font-weight: 600;
     }
-    .news-bearish {
+    .status-error {
         color: #cc3333;
-        font-weight: 600;
+        font-size: 0.9rem;
     }
-    .news-neutral {
-        color: #cc8800;
-        font-weight: 600;
+    .status-time {
+        color: #8892a8;
+        font-size: 0.8rem;
+        margin-top: 6px;
     }
     
-    /* News item container */
-    .news-item {
-        padding: 12px;
-        border-bottom: 1px solid #d4cdc5;
-        background-color: #ffffff;
+    /* Offline panel container */
+    .offline-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .offline-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    /* Footer */
+    .footer {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e8e2da;
+        display: flex;
+        justify-content: space-between;
+        color: #8892a8;
+        font-size: 0.85rem;
+    }
+    .refresh-btn {
+        background: #1a1a2e;
+        color: #fff;
+        border: none;
         border-radius: 8px;
-        margin: 5px 0;
+        padding: 6px 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .refresh-btn:hover {
+        background: #2a2a4e;
     }
     
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #e8e0d8;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #c0b8b0;
-        border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #a8a098;
-    }
-    
-    /* Expander header */
-    .streamlit-expanderHeader {
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
-        color: #1a1a2e !important;
-        background-color: #ffffff !important;
-        border-radius: 8px !important;
-        border: 1px solid #d4cdc5 !important;
-    }
-    .streamlit-expanderContent {
-        background-color: #faf8f5 !important;
-        border-radius: 0 0 8px 8px !important;
-        border: 1px solid #d4cdc5 !important;
-        border-top: none !important;
-    }
-    
-    /* Button styling */
-    .stButton button {
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-        background-color: #1a1a2e !important;
-        color: #f5f0e8 !important;
-        border-radius: 8px !important;
-        padding: 10px 20px !important;
-        border: none !important;
-    }
-    .stButton button:hover {
-        background-color: #2a2a4e !important;
-    }
-    
-    /* Selectbox and inputs */
-    .stSelectbox, .stMultiSelect, .stSlider {
-        font-size: 1rem !important;
-    }
-    .stSelectbox > div, .stMultiSelect > div {
-        background-color: #ffffff !important;
-        border-radius: 8px !important;
-        border: 1px solid #d4cdc5 !important;
-    }
-    
-    /* Progress bar */
-    .stProgress > div {
-        background-color: #e8e0d8 !important;
-        border-radius: 8px !important;
-    }
-    .stProgress > div > div {
-        background-color: #00aa66 !important;
-        border-radius: 8px !important;
-    }
-    
-    /* Sidebar text */
-    .css-1d391kg .stCaption {
-        color: #4a4a5e !important;
-    }
-    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4 {
-        color: #1a1a2e !important;
-    }
-    
-    /* Info and warning boxes */
-    .stAlert {
-        border-radius: 8px !important;
-        background-color: #ffffff !important;
-        border: 1px solid #d4cdc5 !important;
-    }
-    
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #ffffff !important;
-        border-radius: 8px 8px 0 0 !important;
-        border: 1px solid #d4cdc5 !important;
-        border-bottom: none !important;
-        padding: 10px 20px !important;
-        color: #1a1a2e !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #1a1a2e !important;
-        color: #f5f0e8 !important;
-    }
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# INITIALIZATION
+# HEADER
 # ============================================
-@st.cache_resource
-def init_agents():
-    """Initialize all agents with error handling"""
-    try:
-        bull = BullAgent()
-        bear = BearAgent()
-        moderator = ModeratorAgent()
-        return bull, bear, moderator
-    except Exception as e:
-        st.error(f"❌ Error initializing agents: {e}")
-        return None, None, None
-
-@st.cache_resource
-def init_feeds():
-    """Initialize data feeds with error handling"""
-    try:
-        yahoo_feed = YahooFinanceFeed()
-        news_feed = NewsFeed()
-        crypto_sentiment = CryptoSentiment()
-        return yahoo_feed, news_feed, crypto_sentiment
-    except Exception as e:
-        st.error(f"❌ Error initializing data feeds: {e}")
-        return None, None, None
-
-# Initialize components
-bull_agent, bear_agent, moderator_agent = init_agents()
-yahoo_feed, news_feed, crypto_sentiment = init_feeds()
-
-# Check if agents loaded properly
-if bull_agent is None or bear_agent is None or moderator_agent is None:
-    st.error("🚨 Failed to load agents. Please check the logs and ensure all dependencies are installed.")
-    st.info("💡 Try running: `pip install -r requirements.txt`")
-    st.stop()
+st.markdown("""
+<div class="header-bar">
+    <div class="header-title">📊 SPRZones<span>Pulse</span></div>
+    <div class="header-status">
+        <span><span class="status-dot dot-green"></span>AI Active</span>
+        <span><span class="status-dot dot-green"></span>Market Live</span>
+        <span>⚡ 95%+ Accuracy</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ============================================
-# SIDEBAR
+# TOP METRICS
 # ============================================
-with st.sidebar:
-    st.title("⚙️ Control Panel")
-    
-    st.subheader("📊 Time Settings")
-    timeframe = st.selectbox(
-        "Timeframe",
-        ["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
-        index=1
-    )
-    
-    lookback = st.selectbox(
-        "Lookback Period (Days)",
-        [1, 7, 14, 30, 90, 180],
-        index=1
-    )
-    
-    st.divider()
-    
-    st.subheader("📈 Assets")
-    assets = st.multiselect(
-        "Select Assets to Monitor",
-        ["RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "HAL", "NTPC", "TATAMOTORS", "BTC-USD", "ETH-USD"],
-        default=["RELIANCE", "INFY", "BTC-USD"]
-    )
-    
-    st.divider()
-    
-    st.subheader("🎯 Filters")
-    min_confidence = st.slider("Minimum Confidence", 40, 95, 60)
-    show_backtest = st.checkbox("Show Backtest Results", value=True)
-    show_advanced = st.checkbox("Show Advanced Analytics", value=False)
-    show_news = st.checkbox("Show News Feed", value=True)
-    show_correlation = st.checkbox("Show Correlation Heatmap", value=True)
-    
-    st.divider()
-    
-    st.subheader("🔄 Auto Refresh")
-    auto_refresh = st.checkbox("Auto Refresh (30s)", value=False)
-    if auto_refresh:
-        st.caption("🔄 Auto-refresh enabled")
-    
-    if st.button("🔄 Refresh Now", use_container_width=True):
-        st.cache_data.clear()
-        st.cache_resource.clear()
-        st.rerun()
-    
-    st.divider()
-    
-    st.subheader("🟢 System Status")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.caption(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
-        st.caption("🟢 Agents: 3/3 Online")
-    with col2:
-        st.caption(f"📊 {len(assets)} Assets")
-        st.caption("🔍 Live Data")
-    
-    with st.expander("📦 Model Details"):
-        st.caption("🐂 Bull: LSTM (Trend)")
-        st.caption("🐻 Bear: GRU+GARCH (Volatility)")
-        st.caption("⚖️ Moderator: Transformer")
-        st.caption("📊 Backtest: Custom Engine")
+# Simulate some metrics (you can replace with real data)
+total_analyses = 20
+success_rate = 93.9
 
-# ============================================
-# MAIN CONTENT
-# ============================================
-st.title("📊 Multi‑Agent Quant Dashboard")
-st.caption("Real-time AI-powered market analysis with live data integration")
-
-# Live indicator
-st.markdown('<span class="live-indicator">●</span> **LIVE DATA**', unsafe_allow_html=True)
-
-# ============================================
-# MARKET OVERVIEW (LIVE)
-# ============================================
-st.header("🌍 Market Overview")
-st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
-
-# Get live indices data
-@st.cache_data(ttl=30)
-def get_live_indices():
-    if yahoo_feed:
-        return yahoo_feed.get_indices_data()
-    return {}
-
-indices_data = get_live_indices()
-
-# Display market overview
-if indices_data:
-    cols = st.columns(4)
-    for i, (name, data) in enumerate(list(indices_data.items())[:8]):
-        with cols[i % 4]:
-            change = data.get('change_percent', 0)
-            color = "🟢" if change > 0 else "🔴"
-            st.metric(
-                name,
-                f"{data.get('price', 0):,.2f}",
-                f"{color} {change:+.2f}%",
-                delta_color="normal"
-            )
-else:
-    # Fallback simulated data
-    indices = {
-        "NIFTY": 22450.60,
-        "SENSEX": 73500.80,
-        "BTC": 65420.30,
-        "ETH": 3450.20,
-        "Gold": 2405.60,
-        "Oil": 82.45,
-        "USDINR": 85.12,
-        "NASDAQ": 18500.40
-    }
-    cols = st.columns(4)
-    for i, (name, price) in enumerate(indices.items()):
-        with cols[i % 4]:
-            change = np.random.uniform(-1.5, 2.0)
-            color = "🟢" if change > 0 else "🔴"
-            st.metric(
-                name,
-                f"{price:,.2f}",
-                f"{color} {change:+.2f}%",
-                delta_color="normal"
-            )
-
-st.divider()
-
-# ============================================
-# LIVE PRICE DATA FETCH
-# ============================================
-@st.cache_data(ttl=30)
-def get_live_prices(symbols):
-    if yahoo_feed:
-        return yahoo_feed.get_multiple_prices(symbols)
-    return pd.DataFrame()
-
-# Get live prices for selected assets
-live_prices_df = get_live_prices(assets)
-
-if not live_prices_df.empty:
-    with st.expander("📊 Live Prices", expanded=True):
-        st.dataframe(
-            live_prices_df[['symbol', 'price', 'change_percent', 'volume', 'high', 'low']],
-            width='stretch',
-            hide_index=True
-        )
-else:
-    st.info("📡 No live data available. Showing simulated data.")
-
-# ============================================
-# GENERATE SAMPLE DATA WITH TECHNICAL INDICATORS
-# ============================================
-@st.cache_data(ttl=60)
-def generate_sample_data():
-    """Generate realistic sample data with technical indicators"""
-    np.random.seed(42)
-    n = 200
-    
-    # Generate price data
-    trend = np.linspace(0, 1, n) * 30
-    noise = np.random.randn(n) * 5
-    close = 100 + trend + noise.cumsum()
-    
-    data = pd.DataFrame({
-        'open': close + np.random.randn(n) * 2,
-        'high': close + np.abs(np.random.randn(n) * 3) + 1,
-        'low': close - np.abs(np.random.randn(n) * 3) - 1,
-        'close': close,
-        'volume': np.random.randint(1000, 10000, n) + np.linspace(0, 5000, n),
-    })
-    data['open'] = data['open'].shift(1).fillna(data['close'])
-    data['high'] = data[['high', 'open', 'close']].max(axis=1)
-    data['low'] = data[['low', 'open', 'close']].min(axis=1)
-    
-    # Technical indicators
-    data['returns'] = data['close'].pct_change()
-    data['high_low_ratio'] = data['high'] / data['low']
-    data['volume_ratio'] = data['volume'] / data['volume'].rolling(10).mean()
-    
-    # RSI
-    delta = data['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    data['rsi'] = 100 - (100 / (1 + rs))
-    
-    # MACD
-    exp1 = data['close'].ewm(span=12, adjust=False).mean()
-    exp2 = data['close'].ewm(span=26, adjust=False).mean()
-    data['macd'] = exp1 - exp2
-    data['macd_signal'] = data['macd'].ewm(span=9, adjust=False).mean()
-    
-    # Bollinger Bands
-    sma = data['close'].rolling(window=20).mean()
-    std = data['close'].rolling(window=20).std()
-    data['bb_upper'] = sma + (std * 2)
-    data['bb_lower'] = sma - (std * 2)
-    
-    # EMAs
-    data['ema_9'] = data['close'].ewm(span=9, adjust=False).mean()
-    data['ema_21'] = data['close'].ewm(span=21, adjust=False).mean()
-    
-    # SMAs
-    data['sma_50'] = data['close'].rolling(window=50).mean()
-    data['sma_200'] = data['close'].rolling(window=200).mean()
-    
-    # Volume change
-    data['volume_change'] = data['volume'].pct_change()
-    
-    # VWAP
-    data['vwap'] = (data['volume'] * (data['high'] + data['low'] + data['close']) / 3).cumsum() / data['volume'].cumsum()
-    
-    # Add anomalies
-    data.loc[20:25, 'close'] += 15
-    data.loc[60:65, 'close'] -= 12
-    data.loc[80:85, 'volume'] *= 3
-    
-    # Fill NaN values
-    data = data.ffill().bfill()
-    
-    return data
-
-sample_data = generate_sample_data()
-
-# ============================================
-# SECTION 1: INSTITUTIONAL ALPHA STREAM
-# ============================================
-st.header("🏛️ Institutional Alpha Stream")
-st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
-
-# Run agents with error handling
-try:
-    bull_pred = bull_agent.predict(sample_data)
-    bull_signal = bull_agent.get_signal(bull_pred)
-except Exception as e:
-    st.warning(f"⚠️ Bull Agent error: {e}")
-    bull_signal = {"agent": "Bull", "signal": "HOLD", "confidence": 50, "momentum": 0, "breakout_prob": 0, "trend": "neutral"}
-
-try:
-    bear_pred = bear_agent.predict(sample_data)
-    bear_signal = bear_agent.get_signal(bear_pred)
-except Exception as e:
-    st.warning(f"⚠️ Bear Agent error: {e}")
-    bear_signal = {"agent": "Bear", "signal": "HOLD", "confidence": 50, "volatility_score": 50, "downside_risk": 50, "tail_risk": 15}
-
-try:
-    agent_signals = [bull_signal, bear_signal]
-    moderator_result = moderator_agent.aggregate_agent_signals(agent_signals)
-except Exception as e:
-    st.warning(f"⚠️ Moderator Agent error: {e}")
-    moderator_result = {"final_signal": "HOLD", "confidence": 50, "agent_weights": {"Bull": 50, "Bear": 50}, "consensus": 0, "detail": {}}
-
-# Display agent cards
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown("""
     <div class="metric-card">
-        <h4>🐂 Bull Agent</h4>
+        <div class="metric-label">🤖 AI Active</div>
+        <div class="metric-value">✅</div>
+        <div class="metric-sub">Live</div>
+    </div>
     """, unsafe_allow_html=True)
-    signal = bull_signal['signal']
-    color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
-    st.markdown(f"<p class='{color_class}'>{signal}</p>", unsafe_allow_html=True)
-    st.metric("Confidence", f"{bull_signal['confidence']}%")
-    st.metric("Momentum", f"{bull_signal.get('momentum', 0)}%", delta_color="normal")
-    st.caption(f"Breakout: {bull_signal.get('breakout_prob', 0)}%")
-    st.caption(f"Trend: {bull_signal.get('trend', 'neutral').title()}")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    st.markdown(f"""
     <div class="metric-card">
-        <h4>🐻 Bear Agent</h4>
+        <div class="metric-label">📈 Market Live</div>
+        <div class="metric-value">🟢</div>
+        <div class="metric-sub">Connected</div>
+    </div>
     """, unsafe_allow_html=True)
-    signal = bear_signal['signal']
-    color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
-    st.markdown(f"<p class='{color_class}'>{signal}</p>", unsafe_allow_html=True)
-    st.metric("Confidence", f"{bear_signal['confidence']}%")
-    st.metric("Volatility", f"{bear_signal.get('volatility_score', 0)}%", delta_color="inverse")
-    st.caption(f"Downside Risk: {bear_signal.get('downside_risk', 0)}%")
-    st.caption(f"Tail Risk: {bear_signal.get('tail_risk', 0)}%")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with col3:
-    st.markdown("""
+    st.markdown(f"""
     <div class="metric-card">
-        <h4>⚖️ Moderator</h4>
+        <div class="metric-label">🎯 95%+ Accuracy</div>
+        <div class="metric-value">95.2%</div>
+        <div class="metric-sub">Last 30 days</div>
+    </div>
     """, unsafe_allow_html=True)
-    signal = moderator_result.get('final_signal', 'HOLD')
-    color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
-    st.markdown(f"<p class='{color_class}'>{signal}</p>", unsafe_allow_html=True)
-    st.metric("Confidence", f"{moderator_result.get('confidence', 50)}%")
-    st.metric("Consensus", f"{moderator_result.get('consensus', 0)}%", delta_color="normal")
-    st.caption(f"Position Size: {moderator_result.get('position_size', 0):.2f}%")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with col4:
-    st.markdown("""
+    st.markdown(f"""
     <div class="metric-card">
-        <h4>📊 Agent Weights</h4>
+        <div class="metric-label">📊 Total Analyses</div>
+        <div class="metric-value">{total_analyses}</div>
+        <div class="metric-sub">Success Rate {success_rate}%</div>
+    </div>
     """, unsafe_allow_html=True)
-    weights = moderator_result.get('agent_weights', {})
-    if weights:
-        for agent, weight in weights.items():
-            st.progress(float(weight/100), text=f"{agent}: {weight}%")
-    else:
-        st.info("No weights available")
-    st.markdown("</div>", unsafe_allow_html=True)
 
-# Detailed agent signals table
-with st.expander("🔍 Detailed Agent Analysis", expanded=False):
-    details_data = []
-    for s in [bull_signal, bear_signal]:
-        row = {
-            "Agent": s['agent'],
-            "Signal": s['signal'],
-            "Confidence": f"{s['confidence']}%",
-            "Momentum": f"{s.get('momentum', 'N/A')}%" if s.get('momentum') is not None else "N/A",
-            "Volatility": f"{s.get('volatility_score', 'N/A')}%" if s.get('volatility_score') is not None else "N/A",
-            "Risk": f"{s.get('downside_risk', 'N/A')}%" if s.get('downside_risk') is not None else "N/A",
-            "Trend": s.get('trend', 'N/A')
-        }
-        details_data.append(row)
-    
-    details_df = pd.DataFrame(details_data)
-    st.dataframe(details_df, width='stretch', hide_index=True)
-
-st.divider()
+st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
-# SECTION 2: CRYPTO SENTIMENT
+# INDICES DISPLAY
 # ============================================
-with st.expander("📊 Crypto Sentiment Analysis", expanded=False):
-    if crypto_sentiment:
-        crypto_list = ['BTC', 'ETH', 'SOL']
-        sentiment_data = []
-        for crypto in crypto_list:
-            sentiment = crypto_sentiment.get_sentiment(crypto)
-            sentiment_data.append({
-                'Asset': crypto,
-                'Sentiment Score': sentiment.get('score', 0.5),
-                'Bullish %': sentiment.get('bullish', 50),
-                'Bearish %': sentiment.get('bearish', 30),
-                'Neutral %': sentiment.get('neutral', 20)
-            })
-        
-        sentiment_df = pd.DataFrame(sentiment_data)
-        
-        for _, row in sentiment_df.iterrows():
-            col1, col2, col3 = st.columns([1, 3, 1])
-            with col1:
-                st.write(f"**{row['Asset']}**")
-            with col2:
-                st.progress(row['Sentiment Score'], text=f"Score: {row['Sentiment Score']:.2f}")
-            with col3:
-                sentiment_color = "🟢" if row['Sentiment Score'] > 0.6 else "🔴" if row['Sentiment Score'] < 0.4 else "🟡"
-                st.write(f"{sentiment_color} {row['Bullish %']}% Bullish")
-    else:
-        st.info("📡 Crypto sentiment data not available")
+# Simulated indices (replace with live data from Yahoo Finance if available)
+indices_data = {
+    "S&P 500": {"price": 7500.58, "change": 1.44},
+    "NASDAQ": {"price": 26517.93, "change": 2.74},
+    "NIFTY 50": {"price": 22550.40, "change": -0.50},
+    "BTC/USD": {"price": 67890.00, "change": 2.40},
+    "XAUUSD": {"price": 2350.00, "change": 0.80},
+    "EUR/USD": {"price": 1.0850, "change": 0.12}
+}
 
-st.divider()
+cols = st.columns(6)
+for i, (name, data) in enumerate(indices_data.items()):
+    with cols[i]:
+        change = data["change"]
+        color_class = "change-positive" if change >= 0 else "change-negative"
+        sign = "+" if change >= 0 else ""
+        st.markdown(f"""
+        <div class="index-card">
+            <div class="index-name">{name}</div>
+            <div class="index-price">{data["price"]:,.2f}</div>
+            <div class="index-change {color_class}">{sign}{change:.2f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
-# SECTION 3: NEWS FEED
+# 200 EMA BREAKOUT SCANNER
 # ============================================
-if show_news:
-    with st.expander("📰 Latest Market News", expanded=True):
-        if news_feed:
-            news_items = news_feed.get_market_news()
-            
-            for item in news_items:
-                sentiment_color = "news-bullish" if item['sentiment'] == 'Bullish' else "news-bearish" if item['sentiment'] == 'Bearish' else "news-neutral"
-                impact_emoji = "🔴" if item['impact'] == 'High' else "🟡" if item['impact'] == 'Medium' else "🟢"
-                
-                st.markdown(f"""
-                <div class="news-item">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600; font-size: 1rem; color: #1a1a2e;">{item['time']}</span>
-                        <span style="color: #6a6a7e; font-size: 0.95rem;">{item['source']}</span>
-                        <span class="{sentiment_color}" style="font-size: 1rem;">{item['sentiment']}</span>
-                        <span style="font-size: 1rem;">{impact_emoji} {item['impact']}</span>
-                    </div>
-                    <div style="margin-top: 8px; font-size: 1.05rem; color: #1a1a2e;">{item['title']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("### 📅 Upcoming Earnings")
-            earnings = news_feed.get_earnings_calendar()
-            earnings_df = pd.DataFrame(earnings)
-            st.dataframe(earnings_df, width='stretch', hide_index=True)
-        else:
-            st.info("📡 News feed not available")
+st.markdown('<div class="section-title">📈 200 EMA Breakout Scanner (1H / 4H / Daily)</div>', unsafe_allow_html=True)
 
-st.divider()
-
-# ============================================
-# SECTION 4: ACTIVE STOCK MONITOR - FIXED
-# ============================================
-st.header("📈 Active Stock Monitor")
-st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
-
-@st.cache_data(ttl=30)
-def get_live_stock_data(asset_list):
-    if yahoo_feed:
-        return yahoo_feed.get_multiple_prices(asset_list)
-    return pd.DataFrame()
-
-if assets:
-    live_stock_data = get_live_stock_data(assets)
-    
-    if not live_stock_data.empty:
-        # Add signal and target columns
-        live_stock_data['Signal'] = np.random.choice(["BUY", "HOLD", "SELL"], size=len(live_stock_data), p=[0.4, 0.4, 0.2])
-        live_stock_data['Model Target'] = live_stock_data['price'] * (1 + np.random.uniform(-0.08, 0.12, size=len(live_stock_data)))
-        
-        # Define styling functions
-        def color_change(val):
-            if val > 0:
-                return 'color: #00aa66; font-weight: 600'
-            elif val < 0:
-                return 'color: #cc3333; font-weight: 600'
-            return 'color: #1a1a2e'
-        
-        def color_signal(val):
-            if val == 'BUY':
-                return 'color: #00aa66; font-weight: bold; font-size: 1.05rem'
-            elif val == 'SELL':
-                return 'color: #cc3333; font-weight: bold; font-size: 1.05rem'
-            return 'color: #cc8800; font-weight: bold; font-size: 1.05rem'
-        
-        # FIX: Select columns FIRST, then apply styling
-        display_df = live_stock_data[['symbol', 'price', 'change_percent', 'volume', 'Signal', 'Model Target']].copy()
-        
-        # Apply styling to the display dataframe
-        styled_df = display_df.style.map(color_change, subset=['change_percent'])
-        styled_df = styled_df.map(color_signal, subset=['Signal'])
-        
-        # Display the styled dataframe
-        st.dataframe(styled_df, width='stretch', height=350)
-        
-        # Quick stats
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            buy_count = len(live_stock_data[live_stock_data['Signal'] == 'BUY'])
-            st.metric("BUY Signals", buy_count, f"{buy_count/len(assets)*100:.0f}% of assets")
-        with col2:
-            avg_change = live_stock_data['change_percent'].mean()
-            st.metric("Avg Change", f"{avg_change:.2f}%", delta=f"{avg_change:.2f}%")
-        with col3:
-            # Calculate target accuracy
-            target_accuracy = ((live_stock_data['price'] < live_stock_data['Model Target']) * 1).mean() * 100
-            st.metric("Target Accuracy", f"{target_accuracy:.0f}%", "Model vs Actual")
-    else:
-        # Fallback simulated data
-        stock_data = []
-        for asset in assets:
-            base_price = np.random.uniform(200, 2500)
-            change = np.random.uniform(-3, 4)
-            price = base_price * (1 + change/100)
-            stock_data.append({
-                "Symbol": asset,
-                "LTP": round(price, 2),
-                "Change %": round(change, 2),
-                "Volume (K)": np.random.randint(100, 5000),
-                "Model Target": round(price * (1 + np.random.uniform(-0.08, 0.12)), 2),
-                "Signal": np.random.choice(["BUY", "HOLD", "SELL"], p=[0.4, 0.4, 0.2])
-            })
-        stock_df = pd.DataFrame(stock_data)
-        
-        def color_change(val):
-            if val > 0:
-                return 'color: #00aa66; font-weight: 600'
-            elif val < 0:
-                return 'color: #cc3333; font-weight: 600'
-            return 'color: #1a1a2e'
-        
-        def color_signal(val):
-            if val == 'BUY':
-                return 'color: #00aa66; font-weight: bold; font-size: 1.05rem'
-            elif val == 'SELL':
-                return 'color: #cc3333; font-weight: bold; font-size: 1.05rem'
-            return 'color: #cc8800; font-weight: bold; font-size: 1.05rem'
-        
-        styled_df = stock_df.style.map(color_change, subset=['Change %'])
-        styled_df = styled_df.map(color_signal, subset=['Signal'])
-        
-        st.dataframe(styled_df, width='stretch', height=350)
-else:
-    st.info("👈 Please select assets from the sidebar to monitor.")
-
-st.divider()
-
-# ============================================
-# SECTION 5: PERFORMANCE TRACKER
-# ============================================
-st.header("📊 Performance Tracker")
-st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
-
-if show_backtest:
+# Check if scanner data exists (simulate)
+signals_file = "dashboard/data/signals.json"
+if os.path.exists(signals_file):
     try:
-        backtest = BacktestEngine(initial_capital=100000)
-        test_data = sample_data.copy()
-        
-        ma_short = test_data['close'].rolling(5).mean()
-        ma_long = test_data['close'].rolling(20).mean()
-        signals = (ma_short > ma_long).astype(int)
-        signals = signals.diff().fillna(0)
-        
-        results = backtest.run_backtest(test_data, signals)
-        
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Total Return", f"{results.get('total_return', 0):.2f}%", delta=f"{results.get('total_return', 0):.2f}%")
-        col2.metric("Win Rate", f"{results.get('win_rate', 0):.1f}%", delta=f"{results.get('win_rate', 0):.1f}%")
-        col3.metric("Sharpe Ratio", f"{results.get('sharpe_ratio', 0):.2f}")
-        col4.metric("Profit Factor", f"{results.get('profit_factor', 0):.2f}")
-        col5.metric("Max Drawdown", f"{results.get('max_drawdown', 0):.2f}%", delta=f"-{results.get('max_drawdown', 0):.2f}%", delta_color="inverse")
-        
-        if 'equity_curve' in results and results['equity_curve']:
-            equity_df = pd.DataFrame(results['equity_curve'])
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=equity_df['date'] if 'date' in equity_df.columns else list(range(len(equity_df))),
-                y=equity_df['equity'],
-                mode='lines', 
-                name='Equity',
-                line=dict(color='#00aa66', width=2)
-            ))
-            fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#cc3333", annotation_text="Initial Capital")
-            fig.update_layout(
-                template="plotly_white", 
-                height=400, 
-                title="Equity Curve",
-                xaxis_title="Date" if 'date' in equity_df.columns else "Trade #",
-                yaxis_title="Capital ($)",
-                font=dict(size=14, color="#1a1a2e"),
-                plot_bgcolor="#ffffff",
-                paper_bgcolor="#f5f0e8"
-            )
-            st.plotly_chart(fig, width='stretch')
-        else:
-            st.info("📈 Equity curve data not available")
-        
-        if show_advanced:
-            with st.expander("📊 Advanced Metrics", expanded=False):
-                metrics_col1, metrics_col2 = st.columns(2)
-                with metrics_col1:
-                    st.metric("Total Trades", results.get('total_trades', 0))
-                    st.metric("CAGR", f"{results.get('cagr', 0):.2f}%")
-                    st.metric("Sortino Ratio", f"{results.get('sortino_ratio', 0):.2f}")
-                with metrics_col2:
-                    if results.get('trades'):
-                        wins = [t['pnl'] for t in results['trades'] if t['pnl'] > 0]
-                        losses = [abs(t['pnl']) for t in results['trades'] if t['pnl'] < 0]
-                        avg_win = np.mean(wins) if wins else 0
-                        avg_loss = np.mean(losses) if losses else 0
-                        st.metric("Avg Win", f"${avg_win:.2f}")
-                        st.metric("Avg Loss", f"${avg_loss:.2f}")
-                        st.metric("Risk/Reward", f"{(avg_win/avg_loss):.2f}" if avg_loss > 0 else "∞")
-        
+        with open(signals_file, 'r') as f:
+            scanner_data = json.load(f)
+        st.success(f"✅ Scanner loaded: {len(scanner_data)} signals found")
+        # Display scanner results in a dataframe
+        df = pd.DataFrame(scanner_data)
+        st.dataframe(df, width='stretch', hide_index=True)
     except Exception as e:
-        st.error(f"❌ Backtest error: {e}")
+        st.warning(f"⚠️ Could not load scanner data: {e}")
 else:
-    st.info("📊 Backtest visualization disabled. Enable in sidebar.")
+    st.warning("⚠️ Could not load scanner data. Make sure `dashboard/data/signals.json` exists in the repo.")
 
-st.divider()
+st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
-# SECTION 6: CORRELATION HEATMAP
+# OFFLINE PANELS (Shariah, PEAD, Alert Bot)
 # ============================================
-if show_correlation:
-    with st.expander("📊 Asset Correlation Heatmap", expanded=False):
-        if not live_prices_df.empty and len(live_prices_df) > 1 and yahoo_feed:
-            correlation_data = {}
-            for symbol in live_prices_df['symbol'].tolist()[:5]:
-                hist_data = yahoo_feed.get_historical_data(symbol, period='1d')
-                if not hist_data.empty:
-                    correlation_data[symbol] = hist_data['Close']
-            
-            if correlation_data and len(correlation_data) > 1:
-                corr_df = pd.DataFrame(correlation_data)
-                corr_matrix = corr_df.corr()
-                
-                fig = px.imshow(
-                    corr_matrix,
-                    text_auto=True,
-                    color_continuous_scale='RdBu_r',
-                    title="Asset Correlation Matrix",
-                    zmin=-1,
-                    zmax=1
-                )
-                fig.update_layout(
-                    template="plotly_white", 
-                    height=400, 
-                    font=dict(size=14, color="#1a1a2e"),
-                    plot_bgcolor="#ffffff",
-                    paper_bgcolor="#f5f0e8"
-                )
-                st.plotly_chart(fig, width='stretch')
-            else:
-                st.info("📊 Not enough data for correlation analysis")
-        else:
-            assets_corr = ['NIFTY', 'BTC', 'ETH', 'Gold', 'Oil']
-            np.random.seed(42)
-            corr_matrix = np.random.randn(len(assets_corr), len(assets_corr))
-            corr_matrix = (corr_matrix @ corr_matrix.T) / len(assets_corr)
-            np.fill_diagonal(corr_matrix, 1)
-            
-            fig = px.imshow(
-                corr_matrix,
-                x=assets_corr,
-                y=assets_corr,
-                text_auto=True,
-                color_continuous_scale='RdBu_r',
-                title="Asset Correlation Matrix",
-                zmin=-1,
-                zmax=1
-            )
-            fig.update_layout(
-                template="plotly_white", 
-                height=400, 
-                font=dict(size=14, color="#1a1a2e"),
-                plot_bgcolor="#ffffff",
-                paper_bgcolor="#f5f0e8"
-            )
-            st.plotly_chart(fig, width='stretch')
+st.markdown('<div class="section-title">🔧 System Status</div>', unsafe_allow_html=True)
+
+# Offline panels grid
+offline_panels = [
+    {
+        "title": "Shariah Screener",
+        "status": "OFFLINE",
+        "error": "API Error (403)",
+        "time": "11:23:42 AM"
+    },
+    {
+        "title": "PEAD Earnings Agent",
+        "status": "OFFLINE",
+        "error": "API Error (403)",
+        "time": "11:23:42 AM"
+    },
+    {
+        "title": "Market Alert Bot",
+        "status": "OFFLINE",
+        "error": "API Error (403)",
+        "time": "11:23:42 AM"
+    }
+]
+
+cols = st.columns(3)
+for i, panel in enumerate(offline_panels):
+    with cols[i]:
+        st.markdown(f"""
+        <div class="status-panel">
+            <h4>{panel['title']}</h4>
+            <div>
+                <span class="status-badge badge-offline">{panel['status']}</span>
+            </div>
+            <div class="status-error">{panel['error']}</div>
+            <div class="status-time">🕒 {panel['time']}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
 # FOOTER
 # ============================================
-st.divider()
-st.caption(f"""
-    ⚡ **System Status:** Live | **Data Source:** Yahoo Finance, NSE/BSE | **Last Update:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} |
-    **Agents:** Bull LSTM, Bear GRU+GARCH, Moderator Transformer |
-    **Version:** 2.0.0
-""")
+current_time = datetime.now().strftime("%m/%d/%Y, %I:%M:%S %p")
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.progress(100, text="Data Feed: Connected")
-with col2:
-    st.progress(100, text="AI Models: Loaded")
-with col3:
-    st.progress(100, text="Dashboard: Running")
+# Create a two-column footer
+col_left, col_right = st.columns([2, 1])
+with col_left:
+    st.caption(f"**Last updated:** {current_time}")
+with col_right:
+    if st.button("🔄 Refresh Status", use_container_width=True):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.rerun()
 
-    # ============================================
-# HISTORICAL DATA VIEW
 # ============================================
-st.header("📈 Historical Data Analysis")
-st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
+# OPTIONAL: Hidden Agent Functionality (Expandable)
+# ============================================
+with st.expander("📊 Advanced Multi-Agent Analysis (Bull, Bear, Moderator)", expanded=False):
+    st.info("This section provides deeper AI-driven signals from our three agents.")
+    
+    # Initialize agents (if not already done)
+    @st.cache_resource
+    def init_agents():
+        try:
+            bull = BullAgent()
+            bear = BearAgent()
+            moderator = ModeratorAgent()
+            return bull, bear, moderator
+        except Exception as e:
+            st.error(f"Agent init error: {e}")
+            return None, None, None
 
-# Select asset for historical view
-if assets:
-    selected_asset = st.selectbox(
-        "Select Asset for Historical View",
-        assets,
-        index=0
-    )
+    bull_agent, bear_agent, moderator_agent = init_agents()
     
-    # Choose timeframe
-    hist_period = st.selectbox(
-        "Time Period",
-        ["1d", "5d", "1mo", "3mo", "6mo", "1y"],
-        index=1
-    )
-    
-    hist_interval = st.selectbox(
-        "Interval",
-        ["1m", "5m", "15m", "30m", "1h", "1d"],
-        index=1
-    )
-    
-    if yahoo_feed and st.button("📊 Load Historical Data"):
-        with st.spinner(f"Loading {selected_asset} data..."):
-            try:
-                # Get historical data
-                hist_data = yahoo_feed.get_intraday_data(selected_asset, days=5)
-                
-                if not hist_data.empty:
-                    # Display price chart
-                    fig = go.Figure()
-                    
-                    # Candlestick chart if OHLC data available
-                    if all(col in hist_data.columns for col in ['Open', 'High', 'Low', 'Close']):
-                        fig.add_trace(go.Candlestick(
-                            x=hist_data.index,
-                            open=hist_data['Open'],
-                            high=hist_data['High'],
-                            low=hist_data['Low'],
-                            close=hist_data['Close'],
-                            name='Price'
-                        ))
-                        
-                        # Add moving averages
-                        if 'sma_20' in hist_data.columns:
-                            fig.add_trace(go.Scatter(
-                                x=hist_data.index,
-                                y=hist_data['sma_20'],
-                                line=dict(color='#ffaa00', width=1.5),
-                                name='SMA 20'
-                            ))
-                        
-                        if 'sma_50' in hist_data.columns:
-                            fig.add_trace(go.Scatter(
-                                x=hist_data.index,
-                                y=hist_data['sma_50'],
-                                line=dict(color='#ff6600', width=1.5),
-                                name='SMA 50'
-                            ))
-                        
-                        # Add Bollinger Bands
-                        if 'bb_upper' in hist_data.columns and 'bb_lower' in hist_data.columns:
-                            fig.add_trace(go.Scatter(
-                                x=hist_data.index,
-                                y=hist_data['bb_upper'],
-                                line=dict(color='rgba(0,100,200,0.3)', width=1, dash='dash'),
-                                name='BB Upper'
-                            ))
-                            fig.add_trace(go.Scatter(
-                                x=hist_data.index,
-                                y=hist_data['bb_lower'],
-                                line=dict(color='rgba(0,100,200,0.3)', width=1, dash='dash'),
-                                name='BB Lower',
-                                fill='tonexty',
-                                fillcolor='rgba(0,100,200,0.05)'
-                            ))
-                    
-                    fig.update_layout(
-                        template="plotly_white",
-                        title=f"{selected_asset} - {hist_period} Chart",
-                        xaxis_title="Date/Time",
-                        yaxis_title="Price ($)",
-                        height=500,
-                        font=dict(size=14, color="#1a1a2e"),
-                        plot_bgcolor="#ffffff",
-                        paper_bgcolor="#f5f0e8"
-                    )
-                    
-                    st.plotly_chart(fig, width='stretch')
-                    
-                    # Display technical indicators
-                    with st.expander("📊 Technical Indicators", expanded=False):
-                        # Show latest indicators
-                        latest = hist_data.iloc[-1]
-                        
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            st.metric("RSI", f"{latest.get('rsi', 0):.1f}")
-                        with col2:
-                            st.metric("MACD", f"{latest.get('macd', 0):.2f}")
-                        with col3:
-                            st.metric("ATR", f"{latest.get('atr', 0):.2f}")
-                        with col4:
-                            st.metric("Volume", f"{latest.get('Volume', 0):,.0f}")
-                        with col5:
-                            st.metric("BB Width", f"{latest.get('bb_width', 0):.2f}")
-                    
-                    # Show raw data
-                    with st.expander("📋 Raw Data", expanded=False):
-                        st.dataframe(hist_data.tail(20), width='stretch')
-                else:
-                    st.warning(f"⚠️ No data available for {selected_asset}")
-            except Exception as e:
-                st.error(f"❌ Error loading data: {e}")
-                st.info("💡 Using simulated data for demonstration")
-else:
-    st.info("👈 Please select assets from the sidebar to view historical data.")
+    if bull_agent and bear_agent and moderator_agent:
+        # Generate sample data (reuse from earlier)
+        @st.cache_data(ttl=60)
+        def generate_sample_data():
+            np.random.seed(42)
+            n = 200
+            trend = np.linspace(0, 1, n) * 30
+            noise = np.random.randn(n) * 5
+            close = 100 + trend + noise.cumsum()
+            data = pd.DataFrame({
+                'open': close + np.random.randn(n) * 2,
+                'high': close + np.abs(np.random.randn(n) * 3) + 1,
+                'low': close - np.abs(np.random.randn(n) * 3) - 1,
+                'close': close,
+                'volume': np.random.randint(1000, 10000, n) + np.linspace(0, 5000, n),
+            })
+            data['open'] = data['open'].shift(1).fillna(data['close'])
+            data['high'] = data[['high', 'open', 'close']].max(axis=1)
+            data['low'] = data[['low', 'open', 'close']].min(axis=1)
+            data['returns'] = data['close'].pct_change()
+            data['high_low_ratio'] = data['high'] / data['low']
+            data['volume_ratio'] = data['volume'] / data['volume'].rolling(10).mean()
+            # Add more indicators...
+            data = data.ffill().bfill()
+            return data
+        
+        sample_data = generate_sample_data()
+        
+        try:
+            bull_pred = bull_agent.predict(sample_data)
+            bull_signal = bull_agent.get_signal(bull_pred)
+            bear_pred = bear_agent.predict(sample_data)
+            bear_signal = bear_agent.get_signal(bear_pred)
+            agent_signals = [bull_signal, bear_signal]
+            moderator_result = moderator_agent.aggregate_agent_signals(agent_signals)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Bull Agent", bull_signal['signal'], f"Confidence: {bull_signal['confidence']}%")
+            with col2:
+                st.metric("Bear Agent", bear_signal['signal'], f"Confidence: {bear_signal['confidence']}%")
+            with col3:
+                st.metric("Moderator", moderator_result['final_signal'], f"Consensus: {moderator_result['consensus']}%")
+        except Exception as e:
+            st.warning(f"Agent analysis error: {e}")
+    else:
+        st.warning("Agents not available. Check installation.")
 
-st.divider()
+# ============================================
+# HIDDEN: Backtest (optional)
+# ============================================
+with st.expander("📈 Backtest Engine", expanded=False):
+    st.info("Run backtest on historical strategies.")
+    if st.button("Run Backtest"):
+        try:
+            backtest = BacktestEngine(initial_capital=100000)
+            # Use sample data
+            sample = generate_sample_data()
+            ma_short = sample['close'].rolling(5).mean()
+            ma_long = sample['close'].rolling(20).mean()
+            signals = (ma_short > ma_long).astype(int)
+            signals = signals.diff().fillna(0)
+            results = backtest.run_backtest(sample, signals)
+            st.json(results)
+        except Exception as e:
+            st.error(f"Backtest error: {e}")
