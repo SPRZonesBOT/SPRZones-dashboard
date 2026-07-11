@@ -50,7 +50,7 @@ else:
     plot_template = "plotly_white"
 
 # ============================================
-# CUSTOM CSS (polished)
+# CUSTOM CSS
 # ============================================
 st.markdown(f"""
 <style>
@@ -270,7 +270,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# DATA SOURCE CONFIG (Sidebar with debug & status)
+# DATA SOURCE CONFIG (Sidebar)
 # ============================================
 st.sidebar.markdown("### ⚙️ Data Sources")
 try:
@@ -286,20 +286,17 @@ except:
 debug = st.sidebar.checkbox("Show debug info", value=False)
 
 # ============================================
-# ROBUST DATA FETCHER – with detailed error reporting & status
+# ROBUST DATA FETCHER
 # ============================================
 @st.cache_data(ttl=300)
 def get_price_data(symbol, period="1d", interval="1d", debug=False):
     """
-    Try: Yahoo Finance → Twelve Data → Alpha Vantage → Simulated (symbol-specific)
-    Returns DataFrame with OHLCV. Also returns a status message.
+    Try: Yahoo Finance → Twelve Data → Alpha Vantage → Simulated
+    Returns (DataFrame, source_string)
     """
     messages = []
-    status = "unknown"
-
     # ---------- 1. Yahoo Finance ----------
     try:
-        # Use yfinance with a custom session
         session = requests.Session()
         session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'})
         df = yf.download(symbol, period=period, interval=interval, progress=False, session=session)
@@ -312,29 +309,20 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
     except Exception as e:
         messages.append(f"Yahoo error: {e}")
 
-    # ---------- 2. Twelve Data (free, no key) ----------
+    # ---------- 2. Twelve Data ----------
     try:
-        td_symbol_map = {
-            "^NSEI": "NSEI",
-            "^BSESN": "SENSEX",
-            "^GSPC": "SPX",
-            "^IXIC": "IXIC",
-            "^DJI": "DJI",
-            "GC=F": "XAU/USD",
-            "BTC-USD": "BTC/USD",
-            "ETH-USD": "ETH/USD",
-            "EURUSD=X": "EUR/USD",
-            "GBPUSD=X": "GBP/USD",
-            "USDJPY=X": "USD/JPY",
-            "AUDUSD=X": "AUD/USD",
-            "USDCAD=X": "USD/CAD",
-            "NZDUSD=X": "NZD/USD",
+        td_map = {
+            "^NSEI": "NSEI", "^BSESN": "SENSEX", "^GSPC": "SPX",
+            "^IXIC": "IXIC", "^DJI": "DJI", "GC=F": "XAU/USD",
+            "BTC-USD": "BTC/USD", "ETH-USD": "ETH/USD",
+            "EURUSD=X": "EUR/USD", "GBPUSD=X": "GBP/USD",
+            "USDJPY=X": "USD/JPY", "AUDUSD=X": "AUD/USD",
+            "USDCAD=X": "USD/CAD", "NZDUSD=X": "NZD/USD",
             "USDCHF=X": "USD/CHF",
         }
-        td_symbol = td_symbol_map.get(symbol, symbol)
-        url = f"https://api.twelvedata.com/time_series?symbol={td_symbol}&interval=1day&outputsize=30&apikey=demo"
-        if debug:
-            st.sidebar.text(f"TD URL: {url}")
+        td_sym = td_map.get(symbol, symbol)
+        url = f"https://api.twelvedata.com/time_series?symbol={td_sym}&interval=1day&outputsize=30&apikey=demo"
+        if debug: st.sidebar.text(f"TD URL: {url}")
         r = requests.get(url)
         data = r.json()
         if 'values' in data:
@@ -357,33 +345,24 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
     # ---------- 3. Alpha Vantage ----------
     if av_key:
         try:
-            av_symbol_map = {
-                "^NSEI": "NSEI",
-                "^BSESN": "BSESN",
-                "^GSPC": "SPX",
-                "^IXIC": "IXIC",
-                "^DJI": "DJI",
-                "GC=F": "XAUUSD",
-                "BTC-USD": "BTCUSD",
-                "ETH-USD": "ETHUSD",
-                "EURUSD=X": "EURUSD",
-                "GBPUSD=X": "GBPUSD",
-                "USDJPY=X": "USDJPY",
-                "AUDUSD=X": "AUDUSD",
-                "USDCAD=X": "USDCAD",
-                "NZDUSD=X": "NZDUSD",
+            av_map = {
+                "^NSEI": "NSEI", "^BSESN": "BSESN", "^GSPC": "SPX",
+                "^IXIC": "IXIC", "^DJI": "DJI", "GC=F": "XAUUSD",
+                "BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD",
+                "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD",
+                "USDJPY=X": "USDJPY", "AUDUSD=X": "AUDUSD",
+                "USDCAD=X": "USDCAD", "NZDUSD=X": "NZDUSD",
                 "USDCHF=X": "USDCHF",
             }
-            av_symbol = av_symbol_map.get(symbol, symbol)
+            av_sym = av_map.get(symbol, symbol)
             if interval in ["1m","5m","15m","30m","1h"]:
                 function = "TIME_SERIES_INTRADAY"
                 av_interval = "60min" if interval == "1h" else "5min"
-                url = f"https://www.alphavantage.co/query?function={function}&symbol={av_symbol}&interval={av_interval}&apikey={av_key}&outputsize=full"
+                url = f"https://www.alphavantage.co/query?function={function}&symbol={av_sym}&interval={av_interval}&apikey={av_key}&outputsize=full"
             else:
                 function = "TIME_SERIES_DAILY"
-                url = f"https://www.alphavantage.co/query?function={function}&symbol={av_symbol}&apikey={av_key}&outputsize=full"
-            if debug:
-                st.sidebar.text(f"AV URL: {url}")
+                url = f"https://www.alphavantage.co/query?function={function}&symbol={av_sym}&apikey={av_key}&outputsize=full"
+            if debug: st.sidebar.text(f"AV URL: {url}")
             r = requests.get(url)
             data = r.json()
             if 'Note' in data:
@@ -411,9 +390,9 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
         except Exception as e:
             messages.append(f"AV error: {e}")
 
-    # ---------- 4. Final fallback: Simulated data (clearly labelled) ----------
+    # ---------- 4. Simulated fallback ----------
     if debug:
-        st.sidebar.warning(f"⚠️ Using SIMULATED data for {symbol}")
+        st.sidebar.warning(f"⚠️ SIMULATED data for {symbol}")
         for msg in messages:
             st.sidebar.text(msg)
     seed = hash(symbol) % 10000
@@ -436,7 +415,6 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
 # HELPER FUNCTIONS
 # ============================================
 def get_ohlc(symbol):
-    """Return a dict with current OHLC, change %, and data source."""
     df, source = get_price_data(symbol, period="2d", interval="1d", debug=debug)
     if df.empty or len(df) < 2:
         return None, source
@@ -453,11 +431,10 @@ def get_ohlc(symbol):
     }, source
 
 def get_currency(symbol):
-    """Return currency symbol based on asset."""
     if symbol in ["^NSEI", "^BSESN", "NIFTY 50", "SENSEX"]:
         return "₹"
     elif symbol in ["BTC-USD", "ETH-USD", "GC=F"]:
-        return "$"  # crypto and gold are quoted in USD
+        return "$"
     else:
         return "$"
 
@@ -535,37 +512,16 @@ def calculate_strength(price, ema, vol_ratio, rsi, macd_hist, patterns, fund_str
     return min(score, 100)
 
 def get_sector_heatmap():
-    """Fetch sector data for Indian stocks and return DataFrame for heatmap."""
     stock_sectors = {
-        "RELIANCE": "Energy",
-        "TCS": "Technology",
-        "INFY": "Technology",
-        "HDFCBANK": "Financial",
-        "ICICIBANK": "Financial",
-        "HINDUNILVR": "Consumer",
-        "ITC": "Consumer",
-        "SBIN": "Financial",
-        "BHARTIARTL": "Telecom",
-        "KOTAKBANK": "Financial",
-        "LT": "Construction",
-        "AXISBANK": "Financial",
-        "HCLTECH": "Technology",
-        "ASIANPAINT": "Consumer",
-        "MARUTI": "Auto",
-        "SUNPHARMA": "Pharma",
-        "TITAN": "Consumer",
-        "WIPRO": "Technology",
-        "ULTRACEMCO": "Construction",
-        "BAJFINANCE": "Financial",
-        "ADANIPORTS": "Transport",
-        "NTPC": "Energy",
-        "POWERGRID": "Energy",
-        "M&M": "Auto",
-        "TECHM": "Technology",
-        "JSWSTEEL": "Metals",
-        "TATAMOTORS": "Auto",
-        "TATASTEEL": "Metals",
-        "HAL": "Aerospace"
+        "RELIANCE": "Energy", "TCS": "Technology", "INFY": "Technology",
+        "HDFCBANK": "Financial", "ICICIBANK": "Financial", "HINDUNILVR": "Consumer",
+        "ITC": "Consumer", "SBIN": "Financial", "BHARTIARTL": "Telecom",
+        "KOTAKBANK": "Financial", "LT": "Construction", "AXISBANK": "Financial",
+        "HCLTECH": "Technology", "ASIANPAINT": "Consumer", "MARUTI": "Auto",
+        "SUNPHARMA": "Pharma", "TITAN": "Consumer", "WIPRO": "Technology",
+        "ULTRACEMCO": "Construction", "BAJFINANCE": "Financial", "ADANIPORTS": "Transport",
+        "NTPC": "Energy", "POWERGRID": "Energy", "M&M": "Auto", "TECHM": "Technology",
+        "JSWSTEEL": "Metals", "TATAMOTORS": "Auto", "TATASTEEL": "Metals", "HAL": "Aerospace"
     }
     data = []
     for symbol, sector in stock_sectors.items():
@@ -600,7 +556,7 @@ def init_agents():
 bull_agent, bear_agent, moderator_agent = init_agents()
 
 # ============================================
-# GLOBAL INDICES with OHLC expander & currency
+# GLOBAL INDICES
 # ============================================
 st.markdown("### 🌍 Global Indices")
 indices = {
@@ -611,10 +567,9 @@ indices = {
     "DOW": "^DJI",
     "BTC-USD": "BTC-USD",
     "ETH-USD": "ETH-USD",
-    "XAUUSD": "GC=F"   # Gold futures (spot price around 2400)
+    "XAUUSD": "GC=F"
 }
 
-# Display data source status in sidebar
 status_msgs = []
 cols = st.columns(len(indices))
 for i, (name, ticker) in enumerate(indices.items()):
@@ -629,7 +584,6 @@ for i, (name, ticker) in enumerate(indices.items()):
         cols[i].metric(name, "N/A", "N/A")
         status_msgs.append(f"{name}: No data")
 
-# Show data source status in sidebar
 if debug:
     st.sidebar.markdown("### 📡 Data Source Status")
     for msg in status_msgs:
@@ -640,7 +594,6 @@ if debug:
         else:
             st.sidebar.markdown(f"<div class='data-status status-warning'>{msg}</div>", unsafe_allow_html=True)
 
-# OHLC details expander
 with st.expander("📊 Detailed OHLC & Change %"):
     ohlc_data = []
     for name, ticker in indices.items():
@@ -656,15 +609,14 @@ with st.expander("📊 Detailed OHLC & Change %"):
                 "Change %": f"{ohlc['Change %']:.2f}%"
             })
     if ohlc_data:
-        df_ohlc = pd.DataFrame(ohlc_data)
-        st.dataframe(df_ohlc, width='stretch')
+        st.dataframe(pd.DataFrame(ohlc_data), width='stretch')
     else:
         st.info("No OHLC data available.")
 
 st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
-# TABS (Overview, Debate, Scanners, Backtest, News, Portfolio)
+# TABS
 # ============================================
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Overview",
@@ -675,7 +627,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "⚖️ Portfolio Optimisation"
 ])
 
-# ---------- TAB 1: OVERVIEW ----------
+# ---------- TAB 1: Overview ----------
 with tab1:
     st.markdown("### 📈 Market Snapshot")
     col1, col2 = st.columns(2)
@@ -683,7 +635,6 @@ with tab1:
         st.markdown("#### Sector Heatmap (Indian Stocks)")
         sector_df = get_sector_heatmap()
         if not sector_df.empty:
-            sector_df['Change %'] = pd.to_numeric(sector_df['Change %'], errors='coerce')
             pivot = sector_df.pivot_table(index='Sector', columns='Symbol', values='Change %', aggfunc='mean', fill_value=0)
             fig = px.imshow(pivot, text_auto=True, color_continuous_scale='RdYlGn', title="Sector-wise Performance")
             fig.update_layout(template=plot_template, height=400, font=dict(color=text_color))
@@ -692,35 +643,27 @@ with tab1:
             st.info("Sector data unavailable. Please try again later.")
     with col2:
         st.markdown("#### Top Movers (Today)")
-        # In a real implementation, you would fetch this dynamically
         top_data = {
             "Symbol": ["RELIANCE", "BTC-USD", "EURUSD=X", "AAPL"],
             "Price": [2450, 67800, 1.085, 185.50],
             "Change %": [3.2, 2.4, 0.12, -1.2]
         }
         df_top = pd.DataFrame(top_data)
-        def color_change_col(s):
+        def color_change(s):
             return ['color: #00aa66' if v > 0 else 'color: #cc3333' for v in s]
-        st.dataframe(df_top.style.apply(color_change_col, subset=['Change %'], axis=0), width='stretch')
+        st.dataframe(df_top.style.apply(color_change, subset=['Change %'], axis=0), width='stretch')
 
-# ---------- TAB 2: MULTI-AGENT DEBATE ----------
+# ---------- TAB 2: Multi‑Agent Debate ----------
 with tab2:
     st.markdown("### 🧠 Agent Debate – Consensus Signal with Strength Meter")
-
     asset_input = st.text_input("Enter asset symbol (e.g., RELIANCE, BTC-USD, EURUSD=X, AAPL)", "RELIANCE")
     market_type = st.selectbox("Market", ["India", "US", "Forex", "Crypto"], index=0)
-
     if st.button("Analyse Asset"):
         if bull_agent and bear_agent and moderator_agent:
-            if market_type == "India":
-                ticker = asset_input + ".NS"
-            elif market_type == "US":
-                ticker = asset_input
-            elif market_type == "Forex":
-                ticker = asset_input + "=X"
-            else:
-                ticker = asset_input
-
+            if market_type == "India": ticker = asset_input + ".NS"
+            elif market_type == "US": ticker = asset_input
+            elif market_type == "Forex": ticker = asset_input + "=X"
+            else: ticker = asset_input
             with st.spinner(f"Fetching data for {ticker}..."):
                 df, _ = get_price_data(ticker, period="1mo", interval="1d", debug=debug)
                 if df.empty:
@@ -730,7 +673,6 @@ with tab2:
                     df_agent = df.copy()
                     df_agent.columns = [col.lower() for col in df_agent.columns]
                     df_agent = add_technicals(df_agent)
-
                     bull_pred = bull_agent.predict(df_agent)
                     bull_signal = bull_agent.get_signal(bull_pred)
                     bear_pred = bear_agent.predict(df_agent)
@@ -739,7 +681,6 @@ with tab2:
                     moderator_result = moderator_agent.aggregate_agent_signals(agent_signals)
                     final_signal = moderator_result['final_signal']
                     confidence = moderator_result['confidence']
-
                     bull_conf = bull_signal['confidence']
                     bear_conf = bear_signal['confidence']
                     if bull_signal['signal'] == 'BUY' and bear_signal['signal'] == 'SELL':
@@ -747,10 +688,8 @@ with tab2:
                     else:
                         strength = (bull_conf + bear_conf) / 2
                     strength = min(100, max(0, strength))
-
                     st.success(f"**Final Signal: {final_signal}**")
                     st.metric("Consensus Confidence", f"{confidence}%")
-
                     st.markdown("#### Signal Strength Meter")
                     st.markdown(f"""
                     <div class="strength-meter">
@@ -762,7 +701,6 @@ with tab2:
                         <div class="strength-bar" style="width:{strength}%;"></div>
                     </div>
                     """, unsafe_allow_html=True)
-
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric("Bull", bull_signal['signal'], f"Conf: {bull_conf}%")
@@ -772,7 +710,6 @@ with tab2:
                         st.caption(f"Volatility: {bear_signal.get('volatility_score',0)}%")
                     with col3:
                         st.metric("Moderator", final_signal, f"Conf: {confidence}%")
-
                     with st.expander("📝 Agent Reasoning"):
                         st.write("**Bull Agent Reasoning:**", bull_signal.get('reasoning', 'N/A'))
                         st.write("**Bear Agent Reasoning:**", bear_signal.get('reasoning', 'N/A'))
@@ -780,7 +717,7 @@ with tab2:
         else:
             st.warning("Agents not available. Check installation.")
 
-# ---------- TAB 3: SCANNERS & SCREENERS ----------
+# ---------- TAB 3: Scanners ----------
 with tab3:
     st.markdown("### 🔎 Scanners & Screeners")
     st.sidebar.markdown("### ⚙️ Scanner Settings")
@@ -790,8 +727,6 @@ with tab3:
     pattern_toggle = st.sidebar.checkbox("Require Bullish Pattern", value=True)
 
     scanner_tabs = st.tabs(["Indian Stocks", "US Stocks", "Forex", "Crypto", "PEAD Screener", "Penny Stocks"])
-
-    # Indian Stocks Scanner
     with scanner_tabs[0]:
         st.write(f"Scan NIFTY 50 stocks for {ema_period} EMA breakouts.")
         if st.button("Scan Indian Stocks"):
@@ -843,8 +778,7 @@ with tab3:
                                             "RSI": round(rsi.iloc[-1], 1),
                                             "Strength": strength
                                         })
-                except Exception as e:
-                    # Silently skip symbols that fail
+                except:
                     continue
                 prog.progress((idx+1)/len(stock_list))
             if all_results:
@@ -854,14 +788,13 @@ with tab3:
             else:
                 st.info("No breakouts found with current settings.")
 
-    # Other scanners (simplified placeholders)
+    # Other scanner tabs (placeholders – you can extend similarly)
     with scanner_tabs[1]:
         st.info("US Stocks scanner – extend using same pattern.")
     with scanner_tabs[2]:
         st.info("Forex scanner – extend using same pattern.")
     with scanner_tabs[3]:
         st.info("Crypto scanner – extend using same pattern.")
-
     with scanner_tabs[4]:
         st.write("### 📰 PEAD – Post‑Earnings Announcement Drift")
         pead_data = {
@@ -875,7 +808,6 @@ with tab3:
         def color_signal(s):
             return ['color: #00aa66' if v == 'BUY' else 'color: #cc8800' for v in s]
         st.dataframe(df_pead.style.apply(color_signal, subset=['Signal'], axis=0), width='stretch')
-
     with scanner_tabs[5]:
         st.write("### 💰 Penny Stock Screener")
         penny_data = {
@@ -888,7 +820,7 @@ with tab3:
         df_penny = pd.DataFrame(penny_data)
         st.dataframe(df_penny.style.background_gradient(subset=['Strength'], cmap='RdYlGn'), width='stretch')
 
-# ---------- TAB 4: BACKTEST ----------
+# ---------- TAB 4: Backtest ----------
 with tab4:
     st.markdown("### 📊 Backtest Engine")
     backtest_asset = st.text_input("Asset for backtest", "RELIANCE.NS")
@@ -919,22 +851,19 @@ with tab4:
                 signals = ((macd > signal_line) & (macd.shift(1) <= signal_line.shift(1))).astype(int)
                 signals = signals - ((macd < signal_line) & (macd.shift(1) >= signal_line.shift(1))).astype(int)
             results = backtest.run_backtest(df, signals)
-
             st.metric("Total Return", f"{results['total_return']:.2f}%")
             st.metric("Sharpe Ratio", f"{results['sharpe_ratio']:.2f}")
             st.metric("Max Drawdown", f"{results['max_drawdown']:.2f}%")
             st.metric("Win Rate", f"{results['win_rate']:.1f}%")
-
             eq_df = pd.DataFrame(results['equity_curve'])
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=list(range(len(eq_df))), y=eq_df['equity'], mode='lines', name='Equity'))
             fig.update_layout(title="Equity Curve", template=plot_template, height=400)
             st.plotly_chart(fig, width='stretch')
-
             if results.get('trades'):
                 st.dataframe(pd.DataFrame(results['trades']), width='stretch')
 
-# ---------- TAB 5: NEWS & CALENDAR ----------
+# ---------- TAB 5: News & Calendar ----------
 with tab5:
     st.markdown("### 📰 Market News & Economic Calendar")
     st.subheader("Latest Financial News")
@@ -944,7 +873,7 @@ with tab5:
     st.subheader("Economic Calendar")
     st.info("Economic calendar – requires Alpha Vantage key and endpoint integration.")
 
-# ---------- TAB 6: PORTFOLIO OPTIMISATION ----------
+# ---------- TAB 6: Portfolio Optimisation ----------
 with tab6:
     st.markdown("### ⚖️ Portfolio Optimisation (Efficient Frontier)")
     st.write("Select up to 5 assets to optimise.")
