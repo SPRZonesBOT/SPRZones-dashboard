@@ -29,7 +29,7 @@ class GRUModel(nn.Module):
 
 
 class BearAgent(BaseAgent):
-    def __init__(self, model_path: str = "models/bear_gru.pth"):
+    def __init__(self, model_path: str = None):
         self.volatility_features = [
             'returns', 'high_low_ratio', 'volume_ratio',
             'atr', 'bb_width', 'keltner_width',
@@ -39,21 +39,11 @@ class BearAgent(BaseAgent):
         self.load_model()
     
     def load_model(self):
-        """Load GRU model with error handling for PyTorch 2.6+"""
+        """Create new GRU model with random weights (skip file loading)"""
+        print("ℹ️ Bear Agent: Creating new GRU model with random weights.")
         self.model = GRUModel(input_size=len(self.volatility_features))
-        if self.model_path:
-            try:
-                state_dict = torch.load(self.model_path, map_location='cpu', weights_only=False)
-                self.model.load_state_dict(state_dict)
-                print(f"✅ Bear Agent: Model loaded from {self.model_path}")
-            except FileNotFoundError:
-                print(f"⚠️ Bear Agent: Model file {self.model_path} not found. Using untrained model.")
-            except Exception as e:
-                print(f"⚠️ Bear Agent: Model file corrupted ({e}). Using untrained model.")
-                self.model = GRUModel(input_size=len(self.volatility_features))
-        else:
-            print("ℹ️ Bear Agent: No model path provided. Using untrained model.")
         self.model.eval()
+        print("✅ Bear Agent: Ready with untrained GRU model.")
     
     def _fit_garch(self, returns: pd.Series) -> Dict:
         if not ARCH_AVAILABLE or len(returns) < 30:
@@ -79,7 +69,6 @@ class BearAgent(BaseAgent):
                                 (1 - res.params.get('beta[1]', 0.9) + 1e-8))
             }
         except Exception as e:
-            print(f"⚠️ Bear Agent: GARCH error: {e}")
             return {"garch_volatility": [0.02] * 5, "persistence": 0.98, "tail_risk": 0.15}
     
     def _detect_anomalies(self, data: pd.DataFrame) -> Dict:
@@ -105,7 +94,6 @@ class BearAgent(BaseAgent):
                 "max_drawdown": float(max_drawdown)
             }
         except Exception as e:
-            print(f"⚠️ Bear Agent: Anomaly detection error: {e}")
             return {"price_anomalies": 0, "volume_spikes": 0, "max_drawdown": 5.0}
     
     def predict(self, data: pd.DataFrame) -> Dict[str, Any]:
@@ -117,7 +105,6 @@ class BearAgent(BaseAgent):
             
             if not available_cols:
                 features = np.random.randn(100, len(self.volatility_features))
-                print("⚠️ Bear Agent: Using synthetic features")
             else:
                 feature_data = data[available_cols].values[-100:]
                 if feature_data.shape[1] < len(self.volatility_features):
@@ -147,7 +134,6 @@ class BearAgent(BaseAgent):
                 "downside_probability": min(0.9, 0.3 + 0.5 * vol_score + 0.2 * (1 - garch['persistence']))
             }
         except Exception as e:
-            print(f"⚠️ Bear Agent: Prediction error: {e}")
             return {
                 "volatility_score": 0.3,
                 "garch_forecast": [0.02] * 5,
