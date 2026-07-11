@@ -24,31 +24,43 @@ class BullAgent(BaseAgent):
     """Trend & Momentum Forecasting Agent"""
     
     def __init__(self, model_path: str = "models/bull_lstm.pth"):
-        super().__init__("Bull", model_path)
+        # Define feature columns FIRST
         self.feature_cols = [
             'open', 'high', 'low', 'close', 'volume',
             'rsi', 'macd', 'macd_signal', 'bb_upper', 'bb_lower',
             'ema_9', 'ema_21', 'sma_50', 'sma_200',
             'volume_change', 'vwap'
         ]
-        
+        # Then call parent constructor
+        super().__init__("Bull", model_path)
+        # Load model explicitly
+        self.load_model()
+    
     def load_model(self):
         self.model = LSTMPredictor(input_size=len(self.feature_cols))
         if self.model_path:
-            self.model.load_state_dict(torch.load(self.model_path))
+            try:
+                self.model.load_state_dict(torch.load(self.model_path, map_location='cpu'))
+            except FileNotFoundError:
+                print(f"Model file {self.model_path} not found. Using untrained model.")
         self.model.eval()
     
     def predict(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Forecast trend and momentum for next 5 days"""
-        # Prepare features
-        features = data[self.feature_cols].values[-100:]  # Last 100 periods
+        # Ensure we have the required columns
+        available_cols = [col for col in self.feature_cols if col in data.columns]
+        if not available_cols:
+            # Fallback: use price data
+            available_cols = ['close', 'volume']
+        
+        features = data[available_cols].values[-100:]  # Last 100 periods
         features = (features - features.mean(axis=0)) / (features.std(axis=0) + 1e-8)
         
         # Reshape for LSTM: (batch, seq_len, features)
-        X = torch.FloatTensor(features).unsqueeze(0)  # (1, 100, 20)
+        X = torch.FloatTensor(features).unsqueeze(0)
         
         with torch.no_grad():
-            predictions = self.model(X).numpy()[0]  # (5,)
+            predictions = self.model(X).numpy()[0]
         
         return {
             "forecast": predictions.tolist(),
@@ -59,20 +71,15 @@ class BullAgent(BaseAgent):
     
     def _calculate_breakout_probability(self, data: pd.DataFrame, forecast: np.ndarray) -> float:
         """Calculate probability of multi-day breakout"""
-        recent_high = data['high'].rolling(20).max().iloc[-1]
-        recent_low = data['low'].rolling(20).min().iloc[-1]
+        if len(data) < 20:
+            return 0.5
+            
+        recent_high = data['high'].rolling(20).max().iloc[-1] if 'high' in data.columns else data['close'].max()
+        recent_low = data['low'].rolling(20).min().iloc[-1] if 'low' in data.columns else data['close'].min()
         current_price = data['close'].iloc[-1]
         
-        # Resistance/support analysis
-        resistance_levels = data['high'].rolling(50).max().iloc[-1]
-        support_levels = data['low'].rolling(50).min().iloc[-1]
-        
-        # Distance to key levels
-        distance_to_resistance = (resistance_levels - current_price) / current_price
-        distance_to_support = (current_price - support_levels) / current_price
-        
-        # Combine with model forecast
-        breakout_score = 0.4 * (distance_to_resistance < 0.02) + 0.3 * (forecast[-1] > forecast[0]) + 0.3 * (distance_to_support > 0.05)
+        # Simplified breakout calculation
+        breakout_score = 0.5 + 0.3 * (forecast[-1] > forecast[0]) + 0.2 * ((current_price - recent_low) / (recent_high - recent_low + 1e-8))
         return min(1.0, max(0.0, breakout_score))
     
     def get_signal(self, prediction: Dict) -> Dict:
