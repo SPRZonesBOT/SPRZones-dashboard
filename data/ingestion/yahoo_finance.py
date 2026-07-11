@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import requests
 import json
+import warnings
+warnings.filterwarnings('ignore')
 
 class YahooFinanceFeed:
     """Real-time market data from Yahoo Finance"""
@@ -35,7 +37,14 @@ class YahooFinanceFeed:
             'ICICIBANK': 'ICICIBANK.NS',
             'HAL': 'HAL.NS',
             'NTPC': 'NTPC.NS',
-            'TATAMOTORS': 'TATAMOTORS.NS'
+            'TATAMOTORS': 'TATAMOTORS.NS',
+            'WIPRO': 'WIPRO.NS',
+            'HCLTECH': 'HCLTECH.NS',
+            'SUNPHARMA': 'SUNPHARMA.NS',
+            'BHARTIARTL': 'BHARTIARTL.NS',
+            'KOTAKBANK': 'KOTAKBANK.NS',
+            'SBIN': 'SBIN.NS',
+            'BAJFINANCE': 'BAJFINANCE.NS'
         }
     
     def get_live_price(self, symbol: str) -> Dict:
@@ -83,7 +92,7 @@ class YahooFinanceFeed:
             
             data = ticker.history(period=period, interval=interval)
             
-            # Add technical indicators
+            # Add technical indicators if data exists
             if not data.empty:
                 data = self._add_technical_indicators(data)
             
@@ -111,7 +120,7 @@ class YahooFinanceFeed:
         return indices
     
     def _add_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Add technical indicators to historical data"""
+        """Add technical indicators to historical data - FIXED fillna()"""
         df = data.copy()
         
         # Returns
@@ -171,12 +180,12 @@ class YahooFinanceFeed:
         # Price momentum
         df['momentum'] = df['Close'] - df['Close'].shift(10)
         
-        # Fill NaN values
-        df = df.fillna(method='ffill').fillna(method='bfill')
+        # FIX: Use ffill() and bfill() instead of fillna(method='ffill')
+        df = df.ffill().bfill()
         
         return df
     
-    def get_option_chain(self, symbol: str) -> pd.DataFrame:
+    def get_option_chain(self, symbol: str) -> Dict:
         """Get option chain data (for Indian stocks)"""
         try:
             if symbol in self.indian_stocks:
@@ -205,6 +214,50 @@ class YahooFinanceFeed:
         except Exception as e:
             print(f"⚠️ Error fetching option chain for {symbol}: {e}")
             return None
+    
+    def get_intraday_data(self, symbol: str, days: int = 5) -> pd.DataFrame:
+        """Get intraday data for the last N days"""
+        try:
+            if symbol in self.indian_stocks:
+                ticker = yf.Ticker(self.indian_stocks[symbol])
+            else:
+                ticker = yf.Ticker(symbol)
+            
+            # Get data with 5m interval
+            data = ticker.history(period=f'{days}d', interval='5m')
+            
+            if not data.empty:
+                data = self._add_technical_indicators(data)
+            
+            return data
+        except Exception as e:
+            print(f"⚠️ Error fetching intraday data for {symbol}: {e}")
+            return pd.DataFrame()
+    
+    def get_company_info(self, symbol: str) -> Dict:
+        """Get company information"""
+        try:
+            if symbol in self.indian_stocks:
+                ticker = yf.Ticker(self.indian_stocks[symbol])
+            else:
+                ticker = yf.Ticker(symbol)
+            
+            info = ticker.info
+            
+            return {
+                'name': info.get('longName', symbol),
+                'sector': info.get('sector', 'N/A'),
+                'industry': info.get('industry', 'N/A'),
+                'market_cap': info.get('marketCap', 0),
+                'pe_ratio': info.get('trailingPE', 0),
+                'dividend_yield': info.get('dividendYield', 0) * 100 if info.get('dividendYield') else 0,
+                'beta': info.get('beta', 0),
+                'target_price': info.get('targetMeanPrice', 0),
+                'analyst_rating': info.get('recommendationKey', 'N/A')
+            }
+        except Exception as e:
+            print(f"⚠️ Error fetching company info for {symbol}: {e}")
+            return {}
 
 
 class NewsFeed:
@@ -216,7 +269,9 @@ class NewsFeed:
             'Reuters',
             'CNBC',
             'CoinDesk',
-            'Economic Times'
+            'Economic Times',
+            'Business Standard',
+            'Financial Times'
         ]
     
     def get_market_news(self, limit: int = 10) -> List[Dict]:
@@ -257,6 +312,20 @@ class NewsFeed:
                 'source': 'CNBC',
                 'impact': 'Medium',
                 'sentiment': 'Bullish'
+            },
+            {
+                'time': (datetime.now() - timedelta(hours=1, minutes=30)).strftime('%H:%M'),
+                'title': 'RBI keeps repo rate unchanged at 6.5%',
+                'source': 'Economic Times',
+                'impact': 'High',
+                'sentiment': 'Neutral'
+            },
+            {
+                'time': (datetime.now() - timedelta(hours=2)).strftime('%H:%M'),
+                'title': 'Oil prices surge on supply concerns',
+                'source': 'Financial Times',
+                'impact': 'High',
+                'sentiment': 'Bearish'
             }
         ]
         return news_items[:limit]
@@ -264,25 +333,54 @@ class NewsFeed:
     def get_earnings_calendar(self) -> List[Dict]:
         """Get upcoming earnings announcements"""
         return [
-            {'company': 'Reliance', 'date': '2026-07-15', 'time': 'After Market'},
+            {'company': 'Reliance Industries', 'date': '2026-07-15', 'time': 'After Market'},
             {'company': 'TCS', 'date': '2026-07-16', 'time': 'After Market'},
             {'company': 'Infosys', 'date': '2026-07-18', 'time': 'After Market'},
-            {'company': 'HDFC Bank', 'date': '2026-07-20', 'time': 'After Market'}
+            {'company': 'HDFC Bank', 'date': '2026-07-20', 'time': 'After Market'},
+            {'company': 'ICICI Bank', 'date': '2026-07-22', 'time': 'After Market'},
+            {'company': 'HAL', 'date': '2026-07-25', 'time': 'After Market'},
+            {'company': 'Bajaj Finance', 'date': '2026-07-28', 'time': 'After Market'}
         ]
+    
+    def get_market_sentiment(self) -> Dict:
+        """Get overall market sentiment"""
+        return {
+            'overall': 0.65,
+            'trend': 'Bullish',
+            'fear_greed': 72,
+            'put_call_ratio': 0.82,
+            'advance_decline': 1.34,
+            'vix': 14.5
+        }
 
 
 class CryptoSentiment:
     """Cryptocurrency sentiment analysis"""
     
     def __init__(self):
-        self.sentiment_sources = ['Twitter', 'Reddit', 'Telegram']
+        self.sentiment_sources = ['Twitter', 'Reddit', 'Telegram', 'Discord']
     
     def get_sentiment(self, symbol: str) -> Dict:
         """Get sentiment for a cryptocurrency"""
         # Simulated sentiment data
         sentiments = {
-            'BTC': {'score': 0.72, 'bullish': 65, 'bearish': 20, 'neutral': 15},
-            'ETH': {'score': 0.65, 'bullish': 58, 'bearish': 25, 'neutral': 17},
-            'SOL': {'score': 0.48, 'bullish': 45, 'bearish': 35, 'neutral': 20}
+            'BTC': {'score': 0.72, 'bullish': 65, 'bearish': 20, 'neutral': 15, 'volume': 1245000, 'trend': 'Strong Bullish'},
+            'ETH': {'score': 0.65, 'bullish': 58, 'bearish': 25, 'neutral': 17, 'volume': 856000, 'trend': 'Bullish'},
+            'SOL': {'score': 0.48, 'bullish': 45, 'bearish': 35, 'neutral': 20, 'volume': 324000, 'trend': 'Neutral'},
+            'XRP': {'score': 0.55, 'bullish': 52, 'bearish': 30, 'neutral': 18, 'volume': 456000, 'trend': 'Mild Bullish'},
+            'ADA': {'score': 0.42, 'bullish': 40, 'bearish': 38, 'neutral': 22, 'volume': 234000, 'trend': 'Neutral'},
+            'DOT': {'score': 0.38, 'bullish': 35, 'bearish': 42, 'neutral': 23, 'volume': 178000, 'trend': 'Mild Bearish'}
         }
-        return sentiments.get(symbol.upper(), {'score': 0.5, 'bullish': 50, 'bearish': 30, 'neutral': 20})
+        return sentiments.get(symbol.upper(), {'score': 0.5, 'bullish': 50, 'bearish': 30, 'neutral': 20, 'volume': 0, 'trend': 'Neutral'})
+    
+    def get_market_sentiment(self) -> Dict:
+        """Get overall crypto market sentiment"""
+        return {
+            'total_market_cap': 2.45e12,
+            'dominance': 52.3,
+            'fear_greed': 65,
+            '24h_volume': 68.5e9,
+            'trend': 'Bullish',
+            'top_gainers': ['SOL', 'ADA', 'DOT'],
+            'top_losers': ['XRP', 'ETH']
+        }
