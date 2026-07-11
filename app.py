@@ -47,7 +47,7 @@ else:
     plot_template = "plotly_white"
 
 # ============================================
-# CUSTOM CSS (same as before)
+# CUSTOM CSS (unchanged)
 # ============================================
 st.markdown(f"""
 <style>
@@ -249,7 +249,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# GLOBAL INDICES – REAL‑TIME (no random fallback)
+# GLOBAL INDICES – Real‑time with N/A fallback
 # ============================================
 st.markdown("### 🌍 Global Indices")
 indices = {
@@ -299,7 +299,6 @@ bull_agent, bear_agent, moderator_agent = init_agents()
 # HELPER FUNCTIONS
 # ============================================
 def add_technicals(df):
-    """Add technical indicators to a dataframe (lowercase columns)."""
     df = df.copy()
     delta = df['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
@@ -324,7 +323,6 @@ def add_technicals(df):
     return df
 
 def detect_bullish_patterns(df):
-    """Enhanced pattern detection (returns list of patterns)."""
     if len(df) < 3:
         return []
     patterns = []
@@ -353,7 +351,6 @@ def detect_bullish_patterns(df):
     return patterns
 
 def calculate_strength(price, ema, vol_ratio, rsi, macd_hist, patterns, fund_strong):
-    """Calculate a signal strength score (0-100)."""
     score = 0
     if price > ema * 1.02:
         score += 20
@@ -375,7 +372,7 @@ def calculate_strength(price, ema, vol_ratio, rsi, macd_hist, patterns, fund_str
     return min(score, 100)
 
 def get_sector_heatmap():
-    """Fetch sector data for major Indian stocks and create a heatmap."""
+    """Fetch sector data; if fails, return empty DataFrame."""
     stock_sectors = {
         "RELIANCE": "Energy",
         "TCS": "Technology",
@@ -450,7 +447,7 @@ with tab1:
             fig.update_layout(template=plot_template, height=400, font=dict(color=text_color))
             st.plotly_chart(fig, width='stretch')
         else:
-            st.info("Sector data unavailable. Try refreshing.")
+            st.info("Sector data unavailable. Please try again later.")
     with col2:
         st.markdown("#### Top Movers (Today)")
         top_data = {
@@ -459,7 +456,6 @@ with tab1:
             "Change %": [3.2, 2.4, 0.12, -1.2]
         }
         df_top = pd.DataFrame(top_data)
-        # Styling using .apply to avoid ambiguity
         def color_change_col(s):
             return ['color: #00aa66' if v > 0 else 'color: #cc3333' for v in s]
         st.dataframe(df_top.style.apply(color_change_col, subset=['Change %'], axis=0), width='stretch')
@@ -493,16 +489,16 @@ with tab2:
                 ticker = asset_input
 
             with st.spinner(f"Fetching data for {ticker}..."):
-                df = yf.download(ticker, period="1mo", interval="1d", progress=False)
-                if df.empty:
-                    st.error("No data found. Check symbol and market.")
-                else:
-                    df.columns = [col.capitalize() if col.lower() != 'volume' else 'Volume' for col in df.columns]
-                    df_agent = df.copy()
-                    df_agent.columns = [col.lower() for col in df_agent.columns]
-                    df_agent = add_technicals(df_agent)
+                try:
+                    df = yf.download(ticker, period="1mo", interval="1d", progress=False)
+                    if df.empty:
+                        st.error("No data found. Check symbol and market.")
+                    else:
+                        df.columns = [col.capitalize() if col.lower() != 'volume' else 'Volume' for col in df.columns]
+                        df_agent = df.copy()
+                        df_agent.columns = [col.lower() for col in df_agent.columns]
+                        df_agent = add_technicals(df_agent)
 
-                    try:
                         bull_pred = bull_agent.predict(df_agent)
                         bull_signal = bull_agent.get_signal(bull_pred)
                         bear_pred = bear_agent.predict(df_agent)
@@ -549,14 +545,13 @@ with tab2:
                             st.write("**Bull Agent Reasoning:**", bull_signal.get('reasoning', 'N/A'))
                             st.write("**Bear Agent Reasoning:**", bear_signal.get('reasoning', 'N/A'))
                             st.write("**Moderator Reasoning:**", moderator_result.get('reasoning', 'N/A'))
-
-                    except Exception as e:
-                        st.error(f"Agent analysis failed: {e}")
+                except Exception as e:
+                    st.error(f"Data fetch failed: {e}")
         else:
             st.warning("Agents not available. Check installation.")
 
 # ============================================
-# TAB 3: SCANNERS & SCREENERS (unchanged, but with .apply styling)
+# TAB 3: SCANNERS & SCREENERS (with skip on error)
 # ============================================
 with tab3:
     st.markdown("### 🔎 Scanners & Screeners")
@@ -578,35 +573,38 @@ with tab3:
                 try:
                     ticker = sym + ".NS"
                     for tf_label, period, interval in timeframes:
-                        df = yf.download(ticker, period=period, interval=interval, progress=False)
-                        if df.empty or len(df) < 200:
-                            continue
-                        if isinstance(df.columns, pd.MultiIndex):
-                            df.columns = [col[0] for col in df.columns]
-                        df.columns = [col.capitalize() if col.lower() != 'volume' else 'Volume' for col in df.columns]
-                        ema = df['Close'].ewm(span=200, adjust=False).mean()
-                        last_price = df['Close'].iloc[-1]
-                        prev_price = df['Close'].iloc[-2]
-                        last_ema = ema.iloc[-1]
-                        prev_ema = ema.iloc[-2]
-                        cross = (last_price > last_ema) and (prev_price <= prev_ema)
-                        if cross:
-                            patterns = detect_bullish_patterns(df)
-                            if patterns:
-                                vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
-                                vol_ratio = df['Volume'].iloc[-1] / vol_avg if vol_avg > 0 else 0
-                                if vol_ratio >= 1.5:
-                                    strength = calculate_strength(last_price, last_ema, vol_ratio, 50, 0, patterns, False)
-                                    all_results.append({
-                                        "Symbol": sym,
-                                        "Timeframe": tf_label,
-                                        "Price": last_price,
-                                        "EMA": last_ema,
-                                        "Patterns": ", ".join(patterns),
-                                        "Volume Ratio": round(vol_ratio, 2),
-                                        "Strength": strength
-                                    })
-                except Exception as e:
+                        try:
+                            df = yf.download(ticker, period=period, interval=interval, progress=False)
+                            if df.empty or len(df) < 200:
+                                continue
+                            if isinstance(df.columns, pd.MultiIndex):
+                                df.columns = [col[0] for col in df.columns]
+                            df.columns = [col.capitalize() if col.lower() != 'volume' else 'Volume' for col in df.columns]
+                            ema = df['Close'].ewm(span=200, adjust=False).mean()
+                            last_price = df['Close'].iloc[-1]
+                            prev_price = df['Close'].iloc[-2]
+                            last_ema = ema.iloc[-1]
+                            prev_ema = ema.iloc[-2]
+                            cross = (last_price > last_ema) and (prev_price <= prev_ema)
+                            if cross:
+                                patterns = detect_bullish_patterns(df)
+                                if patterns:
+                                    vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
+                                    vol_ratio = df['Volume'].iloc[-1] / vol_avg if vol_avg > 0 else 0
+                                    if vol_ratio >= 1.5:
+                                        strength = calculate_strength(last_price, last_ema, vol_ratio, 50, 0, patterns, False)
+                                        all_results.append({
+                                            "Symbol": sym,
+                                            "Timeframe": tf_label,
+                                            "Price": last_price,
+                                            "EMA": last_ema,
+                                            "Patterns": ", ".join(patterns),
+                                            "Volume Ratio": round(vol_ratio, 2),
+                                            "Strength": strength
+                                        })
+                        except:
+                            continue  # skip this timeframe
+                except:
                     pass
                 prog.progress((idx+1)/len(stock_list))
             if all_results:
@@ -616,6 +614,8 @@ with tab3:
             else:
                 st.info("No breakouts found.")
 
+    # US Stocks, Forex, Crypto – similar try/except blocks (omitted for brevity, but in your final code keep them with try/except)
+    # For space, I'll include the rest but with error skipping.
     with scanner_tabs[1]:
         st.write("Scan S&P 500 stocks for 200 EMA breakouts.")
         if st.button("Scan US Stocks"):
@@ -650,7 +650,7 @@ with tab3:
                                     "Strength": strength
                                 })
                 except:
-                    pass
+                    continue
             if all_results:
                 df_results = pd.DataFrame(all_results)
                 st.success(f"Found {len(df_results)} breakouts.")
@@ -679,7 +679,6 @@ with tab3:
                     if cross:
                         patterns = detect_bullish_patterns(df)
                         if patterns:
-                            # No volume for forex, skip volume check
                             strength = calculate_strength(last_price, last_ema, 1.0, 40, 0, patterns, False)
                             all_results.append({
                                 "Symbol": sym,
@@ -689,7 +688,7 @@ with tab3:
                                 "Strength": strength
                             })
                 except:
-                    pass
+                    continue
             if all_results:
                 df_results = pd.DataFrame(all_results)
                 st.success(f"Found {len(df_results)} breakouts.")
@@ -733,7 +732,7 @@ with tab3:
                                         "Strength": strength
                                     })
                     except:
-                        pass
+                        continue
             if all_results:
                 df_results = pd.DataFrame(all_results)
                 st.success(f"Found {len(df_results)} breakouts.")
@@ -751,7 +750,6 @@ with tab3:
             "Signal": ["BUY", "BUY", "HOLD", "BUY"]
         }
         df_pead = pd.DataFrame(pead_data)
-        # Styling with .apply
         def color_signal(s):
             return ['color: #00aa66' if v == 'BUY' else 'color: #cc8800' for v in s]
         st.dataframe(df_pead.style.apply(color_signal, subset=['Signal'], axis=0), width='stretch')
@@ -805,7 +803,7 @@ with tab4:
             st.error(f"Backtest error: {e}")
 
 # ============================================
-# TAB 5: WATCHLIST (with fixed styling)
+# TAB 5: WATCHLIST (fixed symbols)
 # ============================================
 with tab5:
     st.markdown("### ⭐ Watchlist")
@@ -835,9 +833,7 @@ with tab5:
                 data.append({"Symbol": sym, "Price": "N/A", "Change %": "N/A"})
         if data:
             df_watch = pd.DataFrame(data)
-            # Ensure numeric for styling
             df_watch['Change %'] = pd.to_numeric(df_watch['Change %'], errors='coerce')
-            # Use .apply with axis=0 to avoid ambiguous truth
             def color_change_col(s):
                 return ['color: #00aa66' if v > 0 else 'color: #cc3333' for v in s]
             st.dataframe(
