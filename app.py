@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime
 import sys
 import warnings
 warnings.filterwarnings('ignore')
@@ -32,18 +32,13 @@ st.set_page_config(
 # ============================================
 st.markdown("""
 <style>
-    /* Main background */
     .stApp {
         background-color: #0e1117;
         color: #f0f2f6;
     }
-    
-    /* Sidebar */
     .css-1d391kg {
         background-color: #1e2433;
     }
-    
-    /* Metric cards */
     .metric-card {
         background-color: #1e2433;
         border-radius: 10px;
@@ -51,13 +46,10 @@ st.markdown("""
         border: 1px solid #2d3748;
         margin: 5px 0;
     }
-    
     .metric-card:hover {
         border-color: #4a5568;
         transition: 0.3s;
     }
-    
-    /* Signal colors */
     .signal-buy {
         color: #00ff88;
         font-weight: bold;
@@ -73,31 +65,11 @@ st.markdown("""
         font-weight: bold;
         font-size: 28px;
     }
-    
-    /* Status indicators */
-    .status-online {
-        color: #00ff88;
-    }
-    .status-warning {
-        color: #ffaa00;
-    }
-    .status-offline {
-        color: #ff4444;
-    }
-    
-    /* Headers */
     .section-header {
         border-bottom: 2px solid #2d3748;
         padding-bottom: 10px;
         margin-bottom: 20px;
     }
-    
-    /* Tables */
-    .dataframe {
-        background-color: #1e2433 !important;
-    }
-    
-    /* Scrollbar */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -155,7 +127,6 @@ if bull_agent is None or bear_agent is None or moderator_agent is None:
 with st.sidebar:
     st.title("⚙️ Control Panel")
     
-    # Timeframe selection
     st.subheader("📊 Time Settings")
     timeframe = st.selectbox(
         "Timeframe",
@@ -163,7 +134,6 @@ with st.sidebar:
         index=1
     )
     
-    # Lookback period
     lookback = st.selectbox(
         "Lookback Period (Days)",
         [7, 14, 30, 90, 180, 365],
@@ -172,7 +142,6 @@ with st.sidebar:
     
     st.divider()
     
-    # Asset selection
     st.subheader("📈 Assets")
     assets = st.multiselect(
         "Select Assets to Monitor",
@@ -182,15 +151,13 @@ with st.sidebar:
     
     st.divider()
     
-    # Filters
     st.subheader("🎯 Filters")
-    min_confidence = st.slider("Minimum Confidence", 40, 95, 60, help="Only show signals with confidence above this threshold")
+    min_confidence = st.slider("Minimum Confidence", 40, 95, 60)
     show_backtest = st.checkbox("Show Backtest Results", value=True)
     show_advanced = st.checkbox("Show Advanced Analytics", value=False)
     
     st.divider()
     
-    # Refresh
     if st.button("🔄 Refresh Data", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
@@ -198,7 +165,6 @@ with st.sidebar:
     
     st.divider()
     
-    # System Status
     st.subheader("🟢 System Status")
     col1, col2 = st.columns(2)
     with col1:
@@ -208,7 +174,6 @@ with st.sidebar:
         st.caption(f"📊 {len(assets)} Assets")
         st.caption("🔍 12,458 Scanned")
     
-    # Model info
     with st.expander("📦 Model Details"):
         st.caption("🐂 Bull: LSTM (Trend)")
         st.caption("🐻 Bear: GRU+GARCH (Volatility)")
@@ -221,14 +186,11 @@ with st.sidebar:
 st.title("📊 Multi‑Agent Quant Dashboard")
 st.caption("Real-time AI-powered market analysis with Bull, Bear, and Moderator agents")
 
-# Generate sample data (in production, use real data)
+# Generate sample data
 @st.cache_data(ttl=60)
 def generate_sample_data():
-    """Generate realistic sample data for demo"""
     np.random.seed(42)
     n = 100
-    
-    # Generate price data with trends
     trend = np.linspace(0, 1, n) * 20
     noise = np.random.randn(n) * 5
     close = 100 + trend + noise.cumsum()
@@ -243,16 +205,11 @@ def generate_sample_data():
     data['open'] = data['open'].shift(1).fillna(data['close'])
     data['high'] = data[['high', 'open', 'close']].max(axis=1)
     data['low'] = data[['low', 'open', 'close']].min(axis=1)
-    
-    # Add technical indicators
     data['returns'] = data['close'].pct_change()
     data['high_low_ratio'] = data['high'] / data['low']
     data['volume_ratio'] = data['volume'] / data['volume'].rolling(10).mean()
-    
-    # Add some anomalies for testing
-    data.loc[20:25, 'close'] += 10  # Bullish move
-    data.loc[60:65, 'close'] -= 8   # Bearish move
-    
+    data.loc[20:25, 'close'] += 10
+    data.loc[60:65, 'close'] -= 8
     return data
 
 sample_data = generate_sample_data()
@@ -269,41 +226,21 @@ try:
     bull_signal = bull_agent.get_signal(bull_pred)
 except Exception as e:
     st.warning(f"⚠️ Bull Agent error: {e}")
-    bull_signal = {
-        "agent": "Bull", 
-        "signal": "HOLD", 
-        "confidence": 50, 
-        "momentum": 0, 
-        "breakout_prob": 0,
-        "trend": "neutral"
-    }
+    bull_signal = {"agent": "Bull", "signal": "HOLD", "confidence": 50, "momentum": 0, "breakout_prob": 0, "trend": "neutral"}
 
 try:
     bear_pred = bear_agent.predict(sample_data)
     bear_signal = bear_agent.get_signal(bear_pred)
 except Exception as e:
     st.warning(f"⚠️ Bear Agent error: {e}")
-    bear_signal = {
-        "agent": "Bear", 
-        "signal": "HOLD", 
-        "confidence": 50, 
-        "volatility_score": 50, 
-        "downside_risk": 50,
-        "tail_risk": 15
-    }
+    bear_signal = {"agent": "Bear", "signal": "HOLD", "confidence": 50, "volatility_score": 50, "downside_risk": 50, "tail_risk": 15}
 
 try:
     agent_signals = [bull_signal, bear_signal]
     moderator_result = moderator_agent.aggregate_agent_signals(agent_signals)
 except Exception as e:
     st.warning(f"⚠️ Moderator Agent error: {e}")
-    moderator_result = {
-        "final_signal": "HOLD", 
-        "confidence": 50, 
-        "agent_weights": {"Bull": 50, "Bear": 50}, 
-        "consensus": 0,
-        "detail": {}
-    }
+    moderator_result = {"final_signal": "HOLD", "confidence": 50, "agent_weights": {"Bull": 50, "Bear": 50}, "consensus": 0, "detail": {}}
 
 # Display agent cards
 col1, col2, col3, col4 = st.columns(4)
@@ -316,7 +253,7 @@ with col1:
     signal = bull_signal['signal']
     color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
     st.markdown(f"<p class='{color_class}'>{signal}</p>", unsafe_allow_html=True)
-    st.metric("Confidence", f"{bull_signal['confidence']}%", delta=None)
+    st.metric("Confidence", f"{bull_signal['confidence']}%")
     st.metric("Momentum", f"{bull_signal.get('momentum', 0)}%", delta_color="normal")
     st.caption(f"Breakout: {bull_signal.get('breakout_prob', 0)}%")
     st.caption(f"Trend: {bull_signal.get('trend', 'neutral').title()}")
@@ -330,7 +267,7 @@ with col2:
     signal = bear_signal['signal']
     color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
     st.markdown(f"<p class='{color_class}'>{signal}</p>", unsafe_allow_html=True)
-    st.metric("Confidence", f"{bear_signal['confidence']}%", delta=None)
+    st.metric("Confidence", f"{bear_signal['confidence']}%")
     st.metric("Volatility", f"{bear_signal.get('volatility_score', 0)}%", delta_color="inverse")
     st.caption(f"Downside Risk: {bear_signal.get('downside_risk', 0)}%")
     st.caption(f"Tail Risk: {bear_signal.get('tail_risk', 0)}%")
@@ -344,7 +281,7 @@ with col3:
     signal = moderator_result.get('final_signal', 'HOLD')
     color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
     st.markdown(f"<p class='{color_class}'>{signal}</p>", unsafe_allow_html=True)
-    st.metric("Confidence", f"{moderator_result.get('confidence', 50)}%", delta=None)
+    st.metric("Confidence", f"{moderator_result.get('confidence', 50)}%")
     st.metric("Consensus", f"{moderator_result.get('consensus', 0)}%", delta_color="normal")
     st.caption(f"Position Size: {moderator_result.get('position_size', 0):.2f}%")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -411,7 +348,6 @@ with macro_col1:
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("📡 FII/DII data not available. Using simulated data.")
-            # Simulated data
             sim_data = pd.DataFrame({
                 "Category": ["FII Equity", "DII Equity", "FII Debt", "DII Debt"],
                 "Buy": np.random.randint(1000, 5000, 4),
@@ -449,31 +385,25 @@ with macro_col2:
     col1, col2, col3 = st.columns(3)
     
     if crude:
-        col1.metric("Crude Oil", f"${crude.get('price', 0):.2f}", 
-                   f"{crude.get('change_percent', 0):.2f}%", delta_color="inverse")
+        col1.metric("Crude Oil", f"${crude.get('price', 0):.2f}", f"{crude.get('change_percent', 0):.2f}%", delta_color="inverse")
     else:
         col1.metric("Crude Oil", "$82.45", "0.76%", delta_color="inverse")
     
     if usdinr:
-        col2.metric("USD/INR", f"₹{usdinr.get('rate', 0):.2f}", 
-                   f"{usdinr.get('change_percent', 0):.2f}%", delta_color="inverse")
+        col2.metric("USD/INR", f"₹{usdinr.get('rate', 0):.2f}", f"{usdinr.get('change_percent', 0):.2f}%", delta_color="inverse")
     else:
         col2.metric("USD/INR", "₹85.12", "-0.09%", delta_color="normal")
     
     if inflation:
-        col3.metric("CPI", f"{inflation.get('cpi', 0):.2f}%", 
-                   f"{inflation.get('cpi_change', 0):.2f}%", delta_color="inverse")
+        col3.metric("CPI", f"{inflation.get('cpi', 0):.2f}%", f"{inflation.get('cpi_change', 0):.2f}%", delta_color="inverse")
     else:
         col3.metric("CPI", "4.85%", "-0.12%", delta_color="normal")
     
-    # Bear Agent Alert
     vol_score = bear_signal.get('volatility_score', 50)
     risk_score = bear_signal.get('downside_risk', 50)
     
     alert_color = "#ffaa00" if vol_score > 60 else "#00ff88" if vol_score < 40 else "#ffffff"
-    alert_msg = "⚠️ Increased volatility detected - Reduce position size" if vol_score > 60 else \
-                "✅ Volatility within normal range" if vol_score < 40 else \
-                "📊 Moderate volatility - Normal trading conditions"
+    alert_msg = "⚠️ Increased volatility detected - Reduce position size" if vol_score > 60 else "✅ Volatility within normal range" if vol_score < 40 else "📊 Moderate volatility - Normal trading conditions"
     
     st.markdown(f"""
     <div class="metric-card">
@@ -491,7 +421,6 @@ st.divider()
 st.header("📈 Active Stock Monitor")
 st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
 
-# Map display names to symbols
 stock_map = {
     "ICICI Bank": "ICICIBANK",
     "NTPC": "NTPC",
@@ -502,17 +431,13 @@ stock_map = {
     "HDFC Bank": "HDFCBANK"
 }
 
-# Generate simulated stock data
 @st.cache_data(ttl=30)
 def get_stock_data(asset_list):
     stock_data = []
     np.random.seed(int(datetime.now().timestamp()) % 10000)
     
     for asset in asset_list:
-        symbol = stock_map.get(asset, asset)
         base_price = np.random.uniform(200, 2500)
-        
-        # Generate realistic price with some trend
         change = np.random.uniform(-3, 4)
         price = base_price * (1 + change/100)
         
@@ -529,7 +454,6 @@ def get_stock_data(asset_list):
 if assets:
     stock_df = get_stock_data(assets)
     
-    # Color coding for change
     def color_change(val):
         if val > 0:
             return 'color: #00ff88'
@@ -544,13 +468,11 @@ if assets:
             return 'color: #ff4444; font-weight: bold'
         return 'color: #ffaa00; font-weight: bold'
     
-    # Apply styling
     styled_df = stock_df.style.applymap(color_change, subset=['Change %'])
     styled_df = styled_df.applymap(color_signal, subset=['Signal'])
     
     st.dataframe(styled_df, use_container_width=True, height=200)
     
-    # Quick stats
     col1, col2, col3 = st.columns(3)
     with col1:
         buy_count = len(stock_df[stock_df['Signal'] == 'BUY'])
@@ -574,11 +496,9 @@ st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
 
 if show_backtest:
     try:
-        # Run backtest
         backtest = BacktestEngine(initial_capital=100000)
         test_data = sample_data.copy()
         
-        # Generate signals based on price action
         returns = test_data['close'].pct_change()
         ma_short = test_data['close'].rolling(5).mean()
         ma_long = test_data['close'].rolling(20).mean()
@@ -587,18 +507,13 @@ if show_backtest:
         
         results = backtest.run_backtest(test_data, signals)
         
-        # Performance metrics
         col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Total Return", f"{results.get('total_return', 0):.2f}%", 
-                   delta=f"{results.get('total_return', 0):.2f}%")
-        col2.metric("Win Rate", f"{results.get('win_rate', 0):.1f}%", 
-                   delta=f"{results.get('win_rate', 0):.1f}%")
+        col1.metric("Total Return", f"{results.get('total_return', 0):.2f}%", delta=f"{results.get('total_return', 0):.2f}%")
+        col2.metric("Win Rate", f"{results.get('win_rate', 0):.1f}%", delta=f"{results.get('win_rate', 0):.1f}%")
         col3.metric("Sharpe Ratio", f"{results.get('sharpe_ratio', 0):.2f}")
         col4.metric("Profit Factor", f"{results.get('profit_factor', 0):.2f}")
-        col5.metric("Max Drawdown", f"{results.get('max_drawdown', 0):.2f}%", 
-                   delta=f"-{results.get('max_drawdown', 0):.2f}%", delta_color="inverse")
+        col5.metric("Max Drawdown", f"{results.get('max_drawdown', 0):.2f}%", delta=f"-{results.get('max_drawdown', 0):.2f}%", delta_color="inverse")
         
-        # Equity Curve
         if 'equity_curve' in results and results['equity_curve']:
             equity_df = pd.DataFrame(results['equity_curve'])
             fig = go.Figure()
@@ -609,39 +524,20 @@ if show_backtest:
                 name='Equity',
                 line=dict(color='#00ff88', width=2)
             ))
-            fig.add_hline(
-                y=backtest.initial_capital, 
-                line_dash="dash", 
-                line_color="#ff4444", 
-                annotation_text="Initial Capital"
-            )
-            fig.update_layout(
-                template="plotly_dark", 
-                height=400,
-                title="Equity Curve",
-                xaxis_title="Date" if 'date' in equity_df.columns else "Trade #",
-                yaxis_title="Capital ($)"
-            )
+            fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#ff4444", annotation_text="Initial Capital")
+            fig.update_layout(template="plotly_dark", height=400, title="Equity Curve", xaxis_title="Date" if 'date' in equity_df.columns else "Trade #", yaxis_title="Capital ($)")
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("📈 Equity curve data not available")
         
-        # Trade Distribution
         if results.get('trades'):
             trades_df = pd.DataFrame(results['trades'])
             if not trades_df.empty and 'pnl_pct' in trades_df.columns:
-                fig2 = px.histogram(
-                    trades_df, 
-                    x='pnl_pct', 
-                    title="Trade P&L Distribution",
-                    color_discrete_sequence=['#00ff88'],
-                    nbins=30
-                )
+                fig2 = px.histogram(trades_df, x='pnl_pct', title="Trade P&L Distribution", color_discrete_sequence=['#00ff88'], nbins=30)
                 fig2.add_vline(x=0, line_dash="dash", line_color="#ff4444")
                 fig2.update_layout(template="plotly_dark", height=300)
                 st.plotly_chart(fig2, use_container_width=True)
         
-        # Additional metrics if advanced view is enabled
         if show_advanced:
             with st.expander("📊 Advanced Metrics", expanded=False):
                 metrics_col1, metrics_col2 = st.columns(2)
@@ -651,8 +547,10 @@ if show_backtest:
                     st.metric("Sortino Ratio", f"{results.get('sortino_ratio', 0):.2f}")
                 with metrics_col2:
                     if results.get('trades'):
-                        avg_win = np.mean([t['pnl'] for t in results['trades'] if t['pnl'] > 0]) if any(t['pnl'] > 0 for t in results['trades']) else 0
-                        avg_loss = np.mean([abs(t['pnl']) for t in results['trades'] if t['pnl'] < 0]) if any(t['pnl'] < 0 for t in results['trades']) else 0
+                        wins = [t['pnl'] for t in results['trades'] if t['pnl'] > 0]
+                        losses = [abs(t['pnl']) for t in results['trades'] if t['pnl'] < 0]
+                        avg_win = np.mean(wins) if wins else 0
+                        avg_loss = np.mean(losses) if losses else 0
                         st.metric("Avg Win", f"${avg_win:.2f}")
                         st.metric("Avg Loss", f"${avg_loss:.2f}")
                         st.metric("Risk/Reward", f"{(avg_win/avg_loss):.2f}" if avg_loss > 0 else "∞")
@@ -666,7 +564,7 @@ else:
 st.divider()
 
 # ============================================
-# SECTION 5: RECENT ACTIVITY / ALERTS (Optional)
+# SECTION 5: RECENT ACTIVITY
 # ============================================
 with st.expander("🔔 Recent Alerts & Activity", expanded=False):
     alerts = [
@@ -688,7 +586,6 @@ st.caption(f"""
     **Version:** 1.0.0
 """)
 
-# Progress indicators
 col1, col2, col3 = st.columns(3)
 with col1:
     st.progress(100, text="Data Feed: Connected")
