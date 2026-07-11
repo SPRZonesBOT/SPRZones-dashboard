@@ -249,7 +249,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# GLOBAL INDICES TICKER (with fallback)
+# GLOBAL INDICES – REAL‑TIME (no random fallback)
 # ============================================
 st.markdown("### 🌍 Global Indices")
 indices = {
@@ -266,22 +266,16 @@ indices = {
 cols = st.columns(len(indices))
 for i, (name, ticker) in enumerate(indices.items()):
     try:
-        data = yf.download(ticker, period="1d", interval="1m", progress=False)
-        if not data.empty:
+        data = yf.download(ticker, period="2d", interval="1d", progress=False)
+        if not data.empty and len(data) >= 2:
             price = data['Close'].iloc[-1]
-            prev_close = data['Close'].iloc[0] if len(data) > 1 else price
+            prev_close = data['Close'].iloc[-2]
             change = (price - prev_close) / prev_close * 100 if prev_close else 0
             cols[i].metric(name, f"{price:,.2f}", f"{change:+.2f}%", delta_color="normal")
         else:
-            # Fallback simulated
-            sim_price = np.random.uniform(10000, 20000) if "NIFTY" in name else np.random.uniform(2000, 5000)
-            sim_change = np.random.uniform(-1, 1)
-            cols[i].metric(name, f"{sim_price:,.2f}", f"{sim_change:+.2f}%", delta_color="normal")
+            cols[i].metric(name, "N/A", "N/A")
     except:
-        # Fallback
-        sim_price = np.random.uniform(10000, 20000) if "NIFTY" in name else np.random.uniform(2000, 5000)
-        sim_change = np.random.uniform(-1, 1)
-        cols[i].metric(name, f"{sim_price:,.2f}", f"{sim_change:+.2f}%", delta_color="normal")
+        cols[i].metric(name, "N/A", "N/A")
 
 st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
@@ -465,8 +459,10 @@ with tab1:
             "Change %": [3.2, 2.4, 0.12, -1.2]
         }
         df_top = pd.DataFrame(top_data)
-        # FIX: use .map instead of .applymap
-        st.dataframe(df_top.style.map(lambda x: 'color: #00aa66' if x > 0 else 'color: #cc3333', subset=['Change %']), width='stretch')
+        # Styling using .apply to avoid ambiguity
+        def color_change_col(s):
+            return ['color: #00aa66' if v > 0 else 'color: #cc3333' for v in s]
+        st.dataframe(df_top.style.apply(color_change_col, subset=['Change %'], axis=0), width='stretch')
 
         st.markdown("#### Economic Calendar (Today)")
         econ_cal = pd.DataFrame({
@@ -560,7 +556,7 @@ with tab2:
             st.warning("Agents not available. Check installation.")
 
 # ============================================
-# TAB 3: SCANNERS & SCREENERS (unchanged)
+# TAB 3: SCANNERS & SCREENERS (unchanged, but with .apply styling)
 # ============================================
 with tab3:
     st.markdown("### 🔎 Scanners & Screeners")
@@ -755,8 +751,10 @@ with tab3:
             "Signal": ["BUY", "BUY", "HOLD", "BUY"]
         }
         df_pead = pd.DataFrame(pead_data)
-        # FIX: use .map instead of .applymap
-        st.dataframe(df_pead.style.map(lambda x: 'color: #00aa66' if x == 'BUY' else 'color: #cc8800', subset=['Signal']), width='stretch')
+        # Styling with .apply
+        def color_signal(s):
+            return ['color: #00aa66' if v == 'BUY' else 'color: #cc8800' for v in s]
+        st.dataframe(df_pead.style.apply(color_signal, subset=['Signal'], axis=0), width='stretch')
 
     with scanner_tabs[5]:
         st.write("### 💰 Penny Stock Screener (Price < $10 or ₹100)")
@@ -807,7 +805,7 @@ with tab4:
             st.error(f"Backtest error: {e}")
 
 # ============================================
-# TAB 5: WATCHLIST
+# TAB 5: WATCHLIST (with fixed styling)
 # ============================================
 with tab5:
     st.markdown("### ⭐ Watchlist")
@@ -825,17 +823,27 @@ with tab5:
         data = []
         for sym in st.session_state.watchlist:
             try:
-                df = yf.download(sym, period="1d", interval="1m", progress=False)
-                if not df.empty:
+                df = yf.download(sym, period="2d", interval="1d", progress=False)
+                if not df.empty and len(df) >= 2:
                     price = df['Close'].iloc[-1]
-                    change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0] * 100
+                    prev = df['Close'].iloc[-2]
+                    change = (price - prev) / prev * 100 if prev else 0
                     data.append({"Symbol": sym, "Price": price, "Change %": change})
+                else:
+                    data.append({"Symbol": sym, "Price": "N/A", "Change %": "N/A"})
             except:
-                pass
+                data.append({"Symbol": sym, "Price": "N/A", "Change %": "N/A"})
         if data:
             df_watch = pd.DataFrame(data)
-            # FIX: use .map instead of .applymap
-            st.dataframe(df_watch.style.map(lambda x: 'color: #00aa66' if x > 0 else 'color: #cc3333', subset=['Change %']), width='stretch')
+            # Ensure numeric for styling
+            df_watch['Change %'] = pd.to_numeric(df_watch['Change %'], errors='coerce')
+            # Use .apply with axis=0 to avoid ambiguous truth
+            def color_change_col(s):
+                return ['color: #00aa66' if v > 0 else 'color: #cc3333' for v in s]
+            st.dataframe(
+                df_watch.style.apply(color_change_col, subset=['Change %'], axis=0),
+                width='stretch'
+            )
         else:
             st.info("No data for watchlist symbols.")
         if st.button("Clear Watchlist"):
