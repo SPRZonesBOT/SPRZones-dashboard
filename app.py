@@ -294,7 +294,6 @@ with col4:
     weights = moderator_result.get('agent_weights', {})
     if weights:
         for agent, weight in weights.items():
-            # FIX: Convert to float to avoid float32 type error
             st.progress(float(weight/100), text=f"{agent}: {weight}%")
     else:
         st.info("No weights available")
@@ -316,7 +315,8 @@ with st.expander("🔍 Detailed Agent Analysis", expanded=False):
         details_data.append(row)
     
     details_df = pd.DataFrame(details_data)
-    st.dataframe(details_df, use_container_width=True, hide_index=True)
+    # FIX: use width='stretch' instead of use_container_width=True
+    st.dataframe(details_df, width='stretch', hide_index=True)
 
 st.divider()
 
@@ -345,7 +345,8 @@ with macro_col1:
                          color_discrete_map={"Buy": "#00ff88", "Sell": "#ff4444"})
             fig.update_layout(template="plotly_dark", height=350)
             fig.update_xaxis(tickangle=15)
-            st.plotly_chart(fig, use_container_width=True)
+            # FIX: use width='stretch' instead of use_container_width=True
+            st.plotly_chart(fig, width='stretch')
         else:
             st.info("📡 FII/DII data not available. Using simulated data.")
             sim_data = pd.DataFrame({
@@ -357,7 +358,7 @@ with macro_col1:
                          barmode="group", title="FII/DII Flows (₹ Cr) - Simulated",
                          color_discrete_map={"Buy": "#00ff88", "Sell": "#ff4444"})
             fig.update_layout(template="plotly_dark", height=350)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     except Exception as e:
         st.warning(f"⚠️ Error fetching macro data: {e}")
         st.info("Showing simulated data")
@@ -370,7 +371,7 @@ with macro_col1:
                      barmode="group", title="FII/DII Flows (₹ Cr) - Simulated",
                      color_discrete_map={"Buy": "#00ff88", "Sell": "#ff4444"})
         fig.update_layout(template="plotly_dark", height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 with macro_col2:
     st.subheader("🛢️ Macro Indicators")
@@ -471,7 +472,8 @@ if assets:
     styled_df = stock_df.style.applymap(color_change, subset=['Change %'])
     styled_df = styled_df.applymap(color_signal, subset=['Signal'])
     
-    st.dataframe(styled_df, use_container_width=True, height=200)
+    # FIX: use width='stretch' instead of use_container_width=True
+    st.dataframe(styled_df, width='stretch', height=200)
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -526,7 +528,8 @@ if show_backtest:
             ))
             fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#ff4444", annotation_text="Initial Capital")
             fig.update_layout(template="plotly_dark", height=400, title="Equity Curve", xaxis_title="Date" if 'date' in equity_df.columns else "Trade #", yaxis_title="Capital ($)")
-            st.plotly_chart(fig, use_container_width=True)
+            # FIX: use width='stretch' instead of use_container_width=True
+            st.plotly_chart(fig, width='stretch')
         else:
             st.info("📈 Equity curve data not available")
         
@@ -536,7 +539,7 @@ if show_backtest:
                 fig2 = px.histogram(trades_df, x='pnl_pct', title="Trade P&L Distribution", color_discrete_sequence=['#00ff88'], nbins=30)
                 fig2.add_vline(x=0, line_dash="dash", line_color="#ff4444")
                 fig2.update_layout(template="plotly_dark", height=300)
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, width='stretch')
         
         if show_advanced:
             with st.expander("📊 Advanced Metrics", expanded=False):
@@ -574,7 +577,7 @@ with st.expander("🔔 Recent Alerts & Activity", expanded=False):
         {"time": "09:07", "asset": "Bitcoin", "event": "ETF inflows surge", "impact": "High"},
     ]
     alert_df = pd.DataFrame(alerts)
-    st.dataframe(alert_df, use_container_width=True, hide_index=True)
+    st.dataframe(alert_df, width='stretch', hide_index=True)
 
 # ============================================
 # FOOTER
