@@ -947,3 +947,128 @@ with col2:
     st.progress(100, text="AI Models: Loaded")
 with col3:
     st.progress(100, text="Dashboard: Running")
+
+    # ============================================
+# HISTORICAL DATA VIEW
+# ============================================
+st.header("📈 Historical Data Analysis")
+st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
+
+# Select asset for historical view
+if assets:
+    selected_asset = st.selectbox(
+        "Select Asset for Historical View",
+        assets,
+        index=0
+    )
+    
+    # Choose timeframe
+    hist_period = st.selectbox(
+        "Time Period",
+        ["1d", "5d", "1mo", "3mo", "6mo", "1y"],
+        index=1
+    )
+    
+    hist_interval = st.selectbox(
+        "Interval",
+        ["1m", "5m", "15m", "30m", "1h", "1d"],
+        index=1
+    )
+    
+    if yahoo_feed and st.button("📊 Load Historical Data"):
+        with st.spinner(f"Loading {selected_asset} data..."):
+            try:
+                # Get historical data
+                hist_data = yahoo_feed.get_intraday_data(selected_asset, days=5)
+                
+                if not hist_data.empty:
+                    # Display price chart
+                    fig = go.Figure()
+                    
+                    # Candlestick chart if OHLC data available
+                    if all(col in hist_data.columns for col in ['Open', 'High', 'Low', 'Close']):
+                        fig.add_trace(go.Candlestick(
+                            x=hist_data.index,
+                            open=hist_data['Open'],
+                            high=hist_data['High'],
+                            low=hist_data['Low'],
+                            close=hist_data['Close'],
+                            name='Price'
+                        ))
+                        
+                        # Add moving averages
+                        if 'sma_20' in hist_data.columns:
+                            fig.add_trace(go.Scatter(
+                                x=hist_data.index,
+                                y=hist_data['sma_20'],
+                                line=dict(color='#ffaa00', width=1.5),
+                                name='SMA 20'
+                            ))
+                        
+                        if 'sma_50' in hist_data.columns:
+                            fig.add_trace(go.Scatter(
+                                x=hist_data.index,
+                                y=hist_data['sma_50'],
+                                line=dict(color='#ff6600', width=1.5),
+                                name='SMA 50'
+                            ))
+                        
+                        # Add Bollinger Bands
+                        if 'bb_upper' in hist_data.columns and 'bb_lower' in hist_data.columns:
+                            fig.add_trace(go.Scatter(
+                                x=hist_data.index,
+                                y=hist_data['bb_upper'],
+                                line=dict(color='rgba(0,100,200,0.3)', width=1, dash='dash'),
+                                name='BB Upper'
+                            ))
+                            fig.add_trace(go.Scatter(
+                                x=hist_data.index,
+                                y=hist_data['bb_lower'],
+                                line=dict(color='rgba(0,100,200,0.3)', width=1, dash='dash'),
+                                name='BB Lower',
+                                fill='tonexty',
+                                fillcolor='rgba(0,100,200,0.05)'
+                            ))
+                    
+                    fig.update_layout(
+                        template="plotly_white",
+                        title=f"{selected_asset} - {hist_period} Chart",
+                        xaxis_title="Date/Time",
+                        yaxis_title="Price ($)",
+                        height=500,
+                        font=dict(size=14, color="#1a1a2e"),
+                        plot_bgcolor="#ffffff",
+                        paper_bgcolor="#f5f0e8"
+                    )
+                    
+                    st.plotly_chart(fig, width='stretch')
+                    
+                    # Display technical indicators
+                    with st.expander("📊 Technical Indicators", expanded=False):
+                        # Show latest indicators
+                        latest = hist_data.iloc[-1]
+                        
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            st.metric("RSI", f"{latest.get('rsi', 0):.1f}")
+                        with col2:
+                            st.metric("MACD", f"{latest.get('macd', 0):.2f}")
+                        with col3:
+                            st.metric("ATR", f"{latest.get('atr', 0):.2f}")
+                        with col4:
+                            st.metric("Volume", f"{latest.get('Volume', 0):,.0f}")
+                        with col5:
+                            st.metric("BB Width", f"{latest.get('bb_width', 0):.2f}")
+                    
+                    # Show raw data
+                    with st.expander("📋 Raw Data", expanded=False):
+                        st.dataframe(hist_data.tail(20), width='stretch')
+                else:
+                    st.warning(f"⚠️ No data available for {selected_asset}")
+            except Exception as e:
+                st.error(f"❌ Error loading data: {e}")
+                st.info("💡 Using simulated data for demonstration")
+else:
+    st.info("👈 Please select assets from the sidebar to view historical data.")
+
+st.divider()
