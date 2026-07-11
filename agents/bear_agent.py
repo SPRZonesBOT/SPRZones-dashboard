@@ -6,7 +6,6 @@ from typing import Dict, Any
 import warnings
 warnings.filterwarnings('ignore')
 
-# Try to import arch, but handle if not installed
 try:
     import arch
     ARCH_AVAILABLE = True
@@ -17,8 +16,6 @@ except ImportError:
 from .base_agent import BaseAgent
 
 class GRUModel(nn.Module):
-    """GRU for volatility pattern recognition"""
-    
     def __init__(self, input_size: int = 15, hidden_size: int = 64, 
                  num_layers: int = 2, output_size: int = 3):
         super().__init__()
@@ -32,44 +29,37 @@ class GRUModel(nn.Module):
 
 
 class BearAgent(BaseAgent):
-    """Volatility & Risk Detection Agent"""
-    
     def __init__(self, model_path: str = "models/bear_gru.pth"):
-        # Define volatility_features BEFORE calling parent __init__
         self.volatility_features = [
             'returns', 'high_low_ratio', 'volume_ratio',
             'atr', 'bb_width', 'keltner_width',
             'rvi', 'cvi', 'vix_fear_index'
         ]
-        # Now call parent __init__
         super().__init__("Bear", model_path)
-        # Explicitly load model after all attributes are set
         self.load_model()
     
     def load_model(self):
-        """Load GRU model with error handling"""
+        """Load GRU model with error handling for PyTorch 2.6+"""
         self.model = GRUModel(input_size=len(self.volatility_features))
         if self.model_path:
             try:
-                self.model.load_state_dict(torch.load(self.model_path, map_location='cpu'))
+                # FIX: Use weights_only=False for PyTorch 2.6+
+                state_dict = torch.load(self.model_path, map_location='cpu', weights_only=False)
+                self.model.load_state_dict(state_dict)
                 print(f"✅ Bear Agent: Model loaded from {self.model_path}")
             except FileNotFoundError:
                 print(f"⚠️ Bear Agent: Model file {self.model_path} not found. Using untrained model.")
             except Exception as e:
                 print(f"⚠️ Bear Agent: Error loading model: {e}. Using untrained model.")
+        else:
+            print("ℹ️ Bear Agent: No model path provided. Using untrained model.")
         self.model.eval()
     
     def _fit_garch(self, returns: pd.Series) -> Dict:
-        """Fit GARCH model for volatility forecasting (if available)"""
         if not ARCH_AVAILABLE or len(returns) < 30:
-            return {
-                "garch_volatility": [0.02] * 5,
-                "persistence": 0.98,
-                "tail_risk": 0.15
-            }
+            return {"garch_volatility": [0.02] * 5, "persistence": 0.98, "tail_risk": 0.15}
         
         try:
-            # Clean returns for GARCH
             clean_returns = returns.dropna().values * 100
             if len(clean_returns) < 30:
                 return {"garch_volatility": [0.02] * 5, "persistence": 0.98, "tail_risk": 0.15}
@@ -93,15 +83,11 @@ class BearAgent(BaseAgent):
             return {"garch_volatility": [0.02] * 5, "persistence": 0.98, "tail_risk": 0.15}
     
     def _detect_anomalies(self, data: pd.DataFrame) -> Dict:
-        """Detect market anomalies using statistical methods"""
         try:
             returns = data['close'].pct_change().dropna()
-            
-            # Z-score based detection
             z_scores = np.abs((returns - returns.mean()) / (returns.std() + 1e-8))
             anomalies = z_scores > 2.5
             
-            # Volume spikes
             if 'volume' in data.columns:
                 vol_ma = data['volume'].rolling(20).mean()
                 vol_std = data['volume'].rolling(20).std()
@@ -111,7 +97,6 @@ class BearAgent(BaseAgent):
             else:
                 volume_spikes = 0
             
-            # Max drawdown
             max_drawdown = (data['close'].max() - data['close'].min()) / (data['close'].max() + 1e-8) * 100
             
             return {
@@ -124,43 +109,32 @@ class BearAgent(BaseAgent):
             return {"price_anomalies": 0, "volume_spikes": 0, "max_drawdown": 5.0}
     
     def predict(self, data: pd.DataFrame) -> Dict[str, Any]:
-        """Predict volatility spikes and downside risk"""
         try:
-            # Calculate returns
             returns = data['close'].pct_change().dropna()
             
-            # Prepare volatility features (simplified if data missing)
             features = []
             available_cols = [col for col in self.volatility_features if col in data.columns]
             
             if not available_cols:
-                # Generate synthetic features from price data
                 features = np.random.randn(100, len(self.volatility_features))
                 print("⚠️ Bear Agent: Using synthetic features")
             else:
-                # Use available features
                 feature_data = data[available_cols].values[-100:]
-                # Pad if not enough columns
                 if feature_data.shape[1] < len(self.volatility_features):
                     padding = np.random.randn(feature_data.shape[0], 
                                              len(self.volatility_features) - feature_data.shape[1])
                     feature_data = np.hstack([feature_data, padding])
                 features = feature_data
             
-            # Normalize
             features = (features - features.mean(axis=0)) / (features.std(axis=0) + 1e-8)
             X_tensor = torch.FloatTensor(features).unsqueeze(0)
             
             with torch.no_grad():
                 predictions = self.model(X_tensor).numpy()[0]
             
-            # GARCH volatility forecast
             garch = self._fit_garch(returns)
-            
-            # Anomaly detection
             anomalies = self._detect_anomalies(data)
             
-            # Combine volatility signals
             vol_score = 0.4 * np.mean(predictions) + 0.3 * np.mean(garch['garch_volatility']) + 0.3 * (anomalies['max_drawdown'] / 100)
             vol_score = min(1.0, max(0.0, vol_score * 5))
             
@@ -184,7 +158,6 @@ class BearAgent(BaseAgent):
             }
     
     def get_signal(self, prediction: Dict) -> Dict:
-        """Generate risk-based signal"""
         vol_score = prediction.get("volatility_score", 0.3)
         downside = prediction.get("downside_probability", 0.35)
         tail_risk = prediction.get("tail_risk", 0.15)
