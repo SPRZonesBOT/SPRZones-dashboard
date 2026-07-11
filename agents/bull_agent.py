@@ -23,7 +23,7 @@ class LSTMPredictor(nn.Module):
 class BullAgent(BaseAgent):
     """Trend & Momentum Forecasting Agent"""
     
-    def __init__(self, model_path: str = "models/bull_lstm.pth"):
+    def __init__(self, model_path: str = None):
         # Define feature_cols BEFORE calling parent __init__
         self.feature_cols = [
             'open', 'high', 'low', 'close', 'volume',
@@ -37,34 +37,21 @@ class BullAgent(BaseAgent):
         self.load_model()
     
     def load_model(self):
-        """Load LSTM model with error handling for PyTorch 2.6+"""
+        """Create new LSTM model with random weights (skip file loading)"""
+        print("ℹ️ Bull Agent: Creating new LSTM model with random weights.")
         self.model = LSTMPredictor(input_size=len(self.feature_cols))
-        if self.model_path:
-            try:
-                state_dict = torch.load(self.model_path, map_location='cpu', weights_only=False)
-                self.model.load_state_dict(state_dict)
-                print(f"✅ Bull Agent: Model loaded from {self.model_path}")
-            except FileNotFoundError:
-                print(f"⚠️ Bull Agent: Model file {self.model_path} not found. Using untrained model.")
-            except Exception as e:
-                print(f"⚠️ Bull Agent: Model file corrupted ({e}). Using untrained model.")
-                # Reinitialize with random weights
-                self.model = LSTMPredictor(input_size=len(self.feature_cols))
-        else:
-            print("ℹ️ Bull Agent: No model path provided. Using untrained model.")
         self.model.eval()
+        print("✅ Bull Agent: Ready with untrained LSTM model.")
     
     def predict(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Forecast trend and momentum for next 5 days"""
         available_cols = [col for col in self.feature_cols if col in data.columns]
         if not available_cols:
             available_cols = ['close', 'volume']
-            print(f"⚠️ Bull Agent: Using fallback columns: {available_cols}")
         
         features = data[available_cols].values[-100:]
         
         if len(features) < 10:
-            print("⚠️ Bull Agent: Insufficient data for prediction. Using placeholder.")
             return {
                 "forecast": [0.0, 0.0, 0.0, 0.0, 0.0],
                 "trend_direction": "neutral",
@@ -103,7 +90,6 @@ class BullAgent(BaseAgent):
             breakout_score = 0.3 * range_position + 0.3 * momentum_factor + 0.4 * (range_position > 0.7)
             return min(1.0, max(0.0, breakout_score))
         except Exception as e:
-            print(f"⚠️ Bull Agent: Error calculating breakout probability: {e}")
             return 0.5
     
     def get_signal(self, prediction: Dict) -> Dict:
