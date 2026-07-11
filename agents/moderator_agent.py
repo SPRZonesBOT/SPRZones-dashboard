@@ -10,7 +10,7 @@ class CrossAttention(nn.Module):
     
     def __init__(self, num_agents: int = 4, d_model: int = 128, num_heads: int = 4):
         super().__init__()
-        self.agent_embeddings = nn.Linear(10, d_model)  # Each agent's output vector
+        self.agent_embeddings = nn.Linear(10, d_model)
         self.cross_attn = nn.MultiheadAttention(d_model, num_heads, batch_first=True)
         self.fc = nn.Linear(d_model, 1)
         
@@ -26,13 +26,24 @@ class ModeratorAgent(BaseAgent):
     """Portfolio Sizing & Decision Aggregation Agent"""
     
     def __init__(self, model_path: str = "models/moderator_transformer.pth"):
+        # Call parent __init__ first
         super().__init__("Moderator", model_path)
+        # Initialize agent outputs
         self.agent_outputs = {}
-        
+        # Explicitly load model
+        self.load_model()
+    
     def load_model(self):
+        """Load Transformer model with error handling"""
         self.model = CrossAttention()
         if self.model_path:
-            self.model.load_state_dict(torch.load(self.model_path))
+            try:
+                self.model.load_state_dict(torch.load(self.model_path, map_location='cpu'))
+                print(f"✅ Moderator Agent: Model loaded from {self.model_path}")
+            except FileNotFoundError:
+                print(f"⚠️ Moderator Agent: Model file {self.model_path} not found. Using untrained model.")
+            except Exception as e:
+                print(f"⚠️ Moderator Agent: Error loading model: {e}. Using untrained model.")
         self.model.eval()
     
     def aggregate_agent_signals(self, agent_signals: List[Dict]) -> Dict[str, Any]:
@@ -51,15 +62,19 @@ class ModeratorAgent(BaseAgent):
                 1 if signal['signal'] == 'BUY' else 0,
                 1 if signal['signal'] == 'SELL' else 0,
                 1 if signal['signal'] == 'HOLD' else 0,
-                signal.get('trend', '') == 'bullish',
-                signal.get('agent') == 'Bear'
+                1 if signal.get('trend', '') == 'bullish' else 0,
+                1 if signal.get('agent') == 'Bear' else 0
             ]
             agent_features.append(features)
         
-        X = torch.FloatTensor(np.array(agent_features)).unsqueeze(0)  # (1, num_agents, 10)
+        X = torch.FloatTensor(np.array(agent_features)).unsqueeze(0)
         
-        with torch.no_grad():
-            weights = self.model(X).numpy()[0]
+        try:
+            with torch.no_grad():
+                weights = self.model(X).numpy()[0]
+        except Exception as e:
+            print(f"⚠️ Moderator Agent: Model error: {e}. Using equal weights.")
+            weights = np.ones(len(agent_signals)) / len(agent_signals)
         
         # Weighted decision
         signal_map = {'BUY': 1, 'HOLD': 0, 'SELL': -1}
@@ -96,8 +111,8 @@ class ModeratorAgent(BaseAgent):
         volatility_adjustment = 1 - 0.5 * vol_score
         
         # Adjust based on confidence
-        confidence = 0.7  # from moderator
-        confidence_adjustment = 0.5 + 0.5 * (confidence / 100)
+        confidence = self.agent_outputs.get('Moderator', {}).get('confidence', 70) / 100
+        confidence_adjustment = 0.5 + 0.5 * confidence
         
         position_size = max_loss * volatility_adjustment * confidence_adjustment
         
@@ -107,8 +122,8 @@ class ModeratorAgent(BaseAgent):
         """Get final trading signal with position sizing"""
         return {
             "agent": self.name,
-            "signal": prediction["final_signal"],
-            "confidence": prediction["confidence"],
+            "signal": prediction.get("final_signal", "HOLD"),
+            "confidence": prediction.get("confidence", 50),
             "position_size": prediction.get("position_size", 0),
             "agent_weights": prediction.get("agent_weights", {}),
             "consensus": prediction.get("consensus", 0)
