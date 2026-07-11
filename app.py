@@ -105,15 +105,27 @@ except:
 debug = st.sidebar.checkbox("Show debug info", value=False)
 
 # ============================================
-# ROBUST DATA FETCHER WITH DETAILED ERRORS
+# GLOBAL COUNTER FOR AV RATE LIMITING
+# ============================================
+_av_call_count = 0
+
+def av_call_with_delay():
+    global _av_call_count
+    _av_call_count += 1
+    # Free tier: 5 calls per minute → we sleep 12 seconds between calls
+    if _av_call_count > 1:
+        time.sleep(12)
+    if debug:
+        st.sidebar.text(f"AV call #{_av_call_count} (delay applied)")
+
+# ============================================
+# ROBUST DATA FETCHER
 # ============================================
 @st.cache_data(ttl=300)
 def get_price_data(symbol, period="1d", interval="1d", debug=False):
-    """
-    Try: Yahoo Finance → Twelve Data → Alpha Vantage → Simulated
-    Returns (DataFrame, source_string).
-    """
+    """Returns (DataFrame, source_string)."""
     error_messages = []
+
     # ---------- 1. Yahoo Finance ----------
     try:
         session = requests.Session()
@@ -167,30 +179,57 @@ def get_price_data(symbol, period="1d", interval="1d", debug=False):
                 "USDCHF=X": "USDCHF",
             }
             av_sym = av_map.get(symbol, symbol)
-            url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={av_sym}&apikey={av_key}&outputsize=full"
+            # Use GLOBAL_QUOTE for live price (fast, only one call per symbol)
+            url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={av_sym}&apikey={av_key}"
+            # Apply delay before call
+            av_call_with_delay()
             r = requests.get(url)
             data = r.json()
-            if 'Note' in data:
-                error_messages.append(f"AV rate limit: {data['Note']}")
-            elif 'Error Message' in data:
-                error_messages.append(f"AV error: {data['Error Message']}")
+            if 'Global Quote' in data:
+                quote = data['Global Quote']
+                # Build a single-row DataFrame
+                price = float(quote.get('05. price', 0))
+                change = float(quote.get('09. change', 0))
+                change_percent = float(quote.get('10. change percent', '0%').replace('%', ''))
+                df = pd.DataFrame({
+                    'Open': [price - change],  # approximate (not accurate, but we need OHLC)
+                    'High': [price],
+                    'Low': [price - change],
+                    'Close': [price],
+                    'Volume': [0]
+                })
+                # For OHLC we need full daily data, but we only have current price.
+                # We'll use this for the metric display; for OHLC expander we can fallback to simulated.
+                # But we can also fetch daily series if needed.
+                return df, "Alpha Vantage (GLOBAL_QUOTE)"
             else:
-                key = "Time Series (Daily)"
-                if key in data:
-                    df = pd.DataFrame.from_dict(data[key], orient='index')
-                    df.index = pd.to_datetime(df.index)
-                    df = df.sort_index()
-                    df.columns = [col.split('. ')[1] for col in df.columns]
-                    df.columns = [col.capitalize() for col in df.columns]
-                    df['Volume'] = df['Volume'].astype(float)
-                    for col in ['Open','High','Low','Close']:
-                        df[col] = pd.to_numeric(df[col])
-                    if period in ['1d','5d','10d','1mo']:
-                        days = {'1d':1,'5d':5,'10d':10,'1mo':30}.get(period, 30)
-                        df = df.tail(days)
-                    return df, "Alpha Vantage"
+                error_messages.append(f"AV GLOBAL_QUOTE failed: {data.get('Note', data)}")
+                # Fallback to daily series
+                url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={av_sym}&apikey={av_key}&outputsize=full"
+                av_call_with_delay()
+                r = requests.get(url)
+                data = r.json()
+                if 'Note' in data:
+                    error_messages.append(f"AV rate limit: {data['Note']}")
+                elif 'Error Message' in data:
+                    error_messages.append(f"AV error: {data['Error Message']}")
                 else:
-                    error_messages.append(f"AV response missing time series: {list(data.keys())}")
+                    key = "Time Series (Daily)"
+                    if key in data:
+                        df = pd.DataFrame.from_dict(data[key], orient='index')
+                        df.index = pd.to_datetime(df.index)
+                        df = df.sort_index()
+                        df.columns = [col.split('. ')[1] for col in df.columns]
+                        df.columns = [col.capitalize() for col in df.columns]
+                        df['Volume'] = df['Volume'].astype(float)
+                        for col in ['Open','High','Low','Close']:
+                            df[col] = pd.to_numeric(df[col])
+                        if period in ['1d','5d','10d','1mo']:
+                            days = {'1d':1,'5d':5,'10d':10,'1mo':30}.get(period, 30)
+                            df = df.tail(days)
+                        return df, "Alpha Vantage (DAILY)"
+                    else:
+                        error_messages.append(f"AV response missing time series: {list(data.keys())}")
         except Exception as e:
             error_messages.append(f"AV exception: {e}")
 
@@ -221,7 +260,7 @@ def get_ohlc(symbol):
     if df.empty or len(df) < 2:
         return None, source
     latest = df.iloc[-1]
-    prev_close = df.iloc[-2]['Close']
+    prev_close = df.iloc[-2]['Close'] if len(df) >= 2 else latest['Close']
     change = (latest['Close'] - prev_close) / prev_close * 100 if prev_close else 0
     return {'Open': latest['Open'], 'High': latest['High'], 'Low': latest['Low'],
             'Close': latest['Close'], 'Change %': change, 'Source': source}, source
@@ -742,6 +781,7 @@ with tab6:
                 st.warning("Not enough data for selected assets.")
     else:
         st.info("Select at least 2 assets.")
+
 
 # ============================================
 # FOOTER
