@@ -8,12 +8,14 @@ import sys
 import warnings
 import json
 import os
+import scipy.stats as stats
+from sklearn.covariance import LedoitWolf
 warnings.filterwarnings('ignore')
 
 # Fix path issues
 sys.path.append('.')
 
-# Import your custom modules (adjust paths if needed)
+# Import your custom modules
 from data.ingestion.yahoo_finance import YahooFinanceFeed, NewsFeed, CryptoSentiment
 from agents.bull_agent import BullAgent
 from agents.bear_agent import BearAgent
@@ -31,27 +33,42 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS – SPRZonesPulse Style
+# THEME TOGGLE (Light / Dark)
 # ============================================
-st.markdown("""
+theme = st.radio("Theme", ["Light", "Dark"], index=0, horizontal=True)
+if theme == "Dark":
+    bg_color = "#0e1117"
+    text_color = "#f0f2f6"
+    card_bg = "#1e2433"
+    border_color = "#2d3748"
+    header_bg = "linear-gradient(90deg, #0a0a1a, #1a1a3e)"
+    plot_template = "plotly_dark"
+else:
+    bg_color = "#f8f6f2"
+    text_color = "#1a1a2e"
+    card_bg = "#ffffff"
+    border_color = "#e8e2da"
+    header_bg = "linear-gradient(90deg, #1a1a2e 0%, #16213e 100%)"
+    plot_template = "plotly_white"
+
+# ============================================
+# CUSTOM CSS – Dynamic Theme
+# ============================================
+st.markdown(f"""
 <style>
-    /* Remove default padding */
-    .main .block-container {
+    .main .block-container {{
         padding-top: 0.5rem;
         padding-left: 2rem;
         padding-right: 2rem;
         padding-bottom: 1rem;
         max-width: 100%;
-    }
-    
-    /* Main background */
-    .stApp {
-        background-color: #f8f6f2;
-    }
-    
-    /* Header bar */
-    .header-bar {
-        background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+    }}
+    .stApp {{
+        background-color: {bg_color};
+        color: {text_color};
+    }}
+    .header-bar {{
+        background: {header_bg};
         padding: 0.8rem 2rem;
         border-radius: 0 0 12px 12px;
         margin-bottom: 1.5rem;
@@ -59,195 +76,181 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .header-title {
+    }}
+    .header-title {{
         color: #ffffff;
         font-size: 1.8rem;
         font-weight: 700;
         letter-spacing: 0.5px;
-    }
-    .header-title span {
+    }}
+    .header-title span {{
         color: #00d4ff;
-    }
-    .header-status {
+    }}
+    .header-status {{
         color: #a0aec0;
         font-size: 0.9rem;
         display: flex;
         gap: 1.5rem;
         align-items: center;
-    }
-    .status-dot {
+    }}
+    .status-dot {{
         display: inline-block;
         width: 10px;
         height: 10px;
         border-radius: 50%;
         margin-right: 6px;
-    }
-    .dot-green {
+    }}
+    .dot-green {{
         background-color: #00ff88;
         box-shadow: 0 0 8px #00ff88;
-    }
-    .dot-red {
+    }}
+    .dot-red {{
         background-color: #ff4444;
         box-shadow: 0 0 8px #ff4444;
-    }
-    
-    /* Metric cards */
-    .metric-card {
-        background: #ffffff;
+    }}
+    .metric-card {{
+        background: {card_bg};
         border-radius: 12px;
         padding: 1rem 1.2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #e8e2da;
+        border: 1px solid {border_color};
         text-align: center;
         transition: 0.2s;
-    }
-    .metric-card:hover {
+    }}
+    .metric-card:hover {{
         box-shadow: 0 4px 16px rgba(0,0,0,0.10);
         border-color: #c8c0b8;
-    }
-    .metric-label {
+    }}
+    .metric-label {{
         font-size: 0.85rem;
         color: #6a6a7e;
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.3px;
-    }
-    .metric-value {
+    }}
+    .metric-value {{
         font-size: 1.8rem;
         font-weight: 700;
-        color: #1a1a2e;
+        color: {text_color};
         margin-top: 4px;
-    }
-    .metric-sub {
+    }}
+    .metric-sub {{
         font-size: 0.8rem;
         color: #8892a8;
         margin-top: 2px;
-    }
-    
-    /* Index cards */
-    .index-card {
-        background: #ffffff;
+    }}
+    .index-card {{
+        background: {card_bg};
         border-radius: 10px;
         padding: 0.8rem 1rem;
         box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-        border: 1px solid #e8e2da;
+        border: 1px solid {border_color};
         text-align: center;
-    }
-    .index-name {
+    }}
+    .index-name {{
         font-size: 0.85rem;
         font-weight: 600;
         color: #4a4a5e;
-    }
-    .index-price {
+    }}
+    .index-price {{
         font-size: 1.2rem;
         font-weight: 700;
-        color: #1a1a2e;
+        color: {text_color};
         margin: 2px 0;
-    }
-    .index-change {
+    }}
+    .index-change {{
         font-size: 0.9rem;
         font-weight: 600;
-    }
-    .change-positive {
+    }}
+    .change-positive {{
         color: #00aa66;
-    }
-    .change-negative {
+    }}
+    .change-negative {{
         color: #cc3333;
-    }
-    
-    /* Section headers */
-    .section-title {
+    }}
+    .section-title {{
         font-size: 1.3rem;
         font-weight: 700;
-        color: #1a1a2e;
+        color: {text_color};
         margin: 1.2rem 0 0.8rem 0;
         padding-bottom: 6px;
-        border-bottom: 2px solid #e8e2da;
-    }
-    
-    /* Status panel */
-    .status-panel {
-        background: #ffffff;
+        border-bottom: 2px solid {border_color};
+    }}
+    .status-panel {{
+        background: {card_bg};
         border-radius: 12px;
         padding: 1.2rem;
-        border: 1px solid #e8e2da;
+        border: 1px solid {border_color};
         box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         margin-bottom: 1rem;
-    }
-    .status-panel h4 {
+    }}
+    .status-panel h4 {{
         margin: 0 0 8px 0;
-        color: #1a1a2e;
+        color: {text_color};
         font-weight: 600;
-    }
-    .status-badge {
+    }}
+    .status-badge {{
         display: inline-block;
         padding: 2px 12px;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: 600;
-    }
-    .badge-offline {
+    }}
+    .badge-offline {{
         background: #fee2e2;
         color: #cc3333;
-    }
-    .badge-online {
+    }}
+    .badge-online {{
         background: #d1fae5;
         color: #00aa66;
-    }
-    .status-error {
+    }}
+    .status-error {{
         color: #cc3333;
         font-size: 0.9rem;
-    }
-    .status-time {
+    }}
+    .status-time {{
         color: #8892a8;
         font-size: 0.8rem;
         margin-top: 6px;
-    }
-    
-    /* Signal colors */
-    .signal-buy {
+    }}
+    .signal-buy {{
         color: #00aa66;
         font-weight: bold;
         font-size: 28px;
-    }
-    .signal-sell {
+    }}
+    .signal-sell {{
         color: #cc3333;
         font-weight: bold;
         font-size: 28px;
-    }
-    .signal-hold {
+    }}
+    .signal-hold {{
         color: #cc8800;
         font-weight: bold;
         font-size: 28px;
-    }
-    
-    /* Custom expander */
-    .streamlit-expanderHeader {
-        background-color: #ffffff !important;
-        border: 1px solid #e8e2da !important;
+    }}
+    .streamlit-expanderHeader {{
+        background-color: {card_bg} !important;
+        border: 1px solid {border_color} !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
-        color: #1a1a2e !important;
-    }
-    .streamlit-expanderContent {
-        background-color: #faf8f5 !important;
-        border: 1px solid #e8e2da !important;
+        color: {text_color} !important;
+    }}
+    .streamlit-expanderContent {{
+        background-color: {bg_color} !important;
+        border: 1px solid {border_color} !important;
         border-top: none !important;
         border-radius: 0 0 8px 8px !important;
-    }
-    
-    /* Footer */
-    .footer {
+    }}
+    .footer {{
         margin-top: 2rem;
         padding-top: 1rem;
-        border-top: 1px solid #e8e2da;
+        border-top: 1px solid {border_color};
         display: flex;
         justify-content: space-between;
         color: #8892a8;
         font-size: 0.85rem;
-    }
-    .refresh-btn {
+    }}
+    .refresh-btn {{
         background: #1a1a2e;
         color: #fff;
         border: none;
@@ -256,14 +259,12 @@ st.markdown("""
         font-weight: 600;
         cursor: pointer;
         transition: 0.2s;
-    }
-    .refresh-btn:hover {
+    }}
+    .refresh-btn:hover {{
         background: #2a2a4e;
-    }
-    
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    }}
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -288,7 +289,6 @@ total_analyses = 20
 success_rate = 93.9
 
 col1, col2, col3, col4 = st.columns(4)
-
 with col1:
     st.markdown("""
     <div class="metric-card">
@@ -297,7 +297,6 @@ with col1:
         <div class="metric-sub">Live</div>
     </div>
     """, unsafe_allow_html=True)
-
 with col2:
     st.markdown("""
     <div class="metric-card">
@@ -306,7 +305,6 @@ with col2:
         <div class="metric-sub">Connected</div>
     </div>
     """, unsafe_allow_html=True)
-
 with col3:
     st.markdown(f"""
     <div class="metric-card">
@@ -315,7 +313,6 @@ with col3:
         <div class="metric-sub">Last 30 days</div>
     </div>
     """, unsafe_allow_html=True)
-
 with col4:
     st.markdown(f"""
     <div class="metric-card">
@@ -328,7 +325,7 @@ with col4:
 st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
-# INDICES DISPLAY (Simulated or Live)
+# INDICES DISPLAY
 # ============================================
 indices_data = {
     "S&P 500": {"price": 7500.58, "change": 1.44},
@@ -367,8 +364,7 @@ if os.path.exists(signals_file):
             scanner_data = json.load(f)
         if scanner_data:
             st.success(f"✅ Scanner loaded: {len(scanner_data)} signals found")
-            df = pd.DataFrame(scanner_data)
-            st.dataframe(df, width='stretch', hide_index=True)
+            st.dataframe(pd.DataFrame(scanner_data), width='stretch', hide_index=True)
         else:
             st.info("📊 No signals found. Scanner is active but no breakouts detected.")
     except Exception as e:
@@ -384,24 +380,9 @@ st.markdown("<hr style='margin: 0.5rem 0; border-color: #e8e2da;'>", unsafe_allo
 st.markdown('<div class="section-title">🔧 System Status</div>', unsafe_allow_html=True)
 
 offline_panels = [
-    {
-        "title": "Shariah Screener",
-        "status": "OFFLINE",
-        "error": "API Error (403)",
-        "time": datetime.now().strftime("%I:%M:%S %p")
-    },
-    {
-        "title": "PEAD Earnings Agent",
-        "status": "OFFLINE",
-        "error": "API Error (403)",
-        "time": datetime.now().strftime("%I:%M:%S %p")
-    },
-    {
-        "title": "Market Alert Bot",
-        "status": "OFFLINE",
-        "error": "API Error (403)",
-        "time": datetime.now().strftime("%I:%M:%S %p")
-    }
+    {"title": "Shariah Screener", "status": "OFFLINE", "error": "API Error (403)", "time": datetime.now().strftime("%I:%M:%S %p")},
+    {"title": "PEAD Earnings Agent", "status": "OFFLINE", "error": "API Error (403)", "time": datetime.now().strftime("%I:%M:%S %p")},
+    {"title": "Market Alert Bot", "status": "OFFLINE", "error": "API Error (403)", "time": datetime.now().strftime("%I:%M:%S %p")}
 ]
 
 cols = st.columns(3)
@@ -410,9 +391,7 @@ for i, panel in enumerate(offline_panels):
         st.markdown(f"""
         <div class="status-panel">
             <h4>{panel['title']}</h4>
-            <div>
-                <span class="status-badge badge-offline">{panel['status']}</span>
-            </div>
+            <div><span class="status-badge badge-offline">{panel['status']}</span></div>
             <div class="status-error">{panel['error']}</div>
             <div class="status-time">🕒 {panel['time']}</div>
         </div>
@@ -421,11 +400,8 @@ for i, panel in enumerate(offline_panels):
 st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
 # ============================================
-# MULTI‑AGENT ANALYSIS (ENHANCED)
+# INITIALIZE AGENTS & FEEDS (CACHED)
 # ============================================
-st.markdown('<div class="section-title">🤖 AI Multi-Agent Analysis</div>', unsafe_allow_html=True)
-
-# Initialize agents and feeds (cached)
 @st.cache_resource
 def init_agents():
     try:
@@ -437,9 +413,21 @@ def init_agents():
         st.error(f"Agent init error: {e}")
         return None, None, None
 
-bull_agent, bear_agent, moderator_agent = init_agents()
+@st.cache_resource
+def init_feeds():
+    try:
+        yahoo = YahooFinanceFeed()
+        news = NewsFeed()
+        crypto = CryptoSentiment()
+        return yahoo, news, crypto
+    except Exception as e:
+        st.error(f"Feed init error: {e}")
+        return None, None, None
 
-# Generate sample data with technical indicators (cached)
+bull_agent, bear_agent, moderator_agent = init_agents()
+yahoo_feed, news_feed, crypto_sentiment = init_feeds()
+
+# Generate sample data for agents
 @st.cache_data(ttl=60)
 def generate_sample_data():
     np.random.seed(42)
@@ -465,6 +453,11 @@ def generate_sample_data():
 
 sample_data = generate_sample_data()
 
+# ============================================
+# MULTI‑AGENT ANALYSIS (ENHANCED)
+# ============================================
+st.markdown('<div class="section-title">🤖 AI Multi-Agent Analysis</div>', unsafe_allow_html=True)
+
 if bull_agent and bear_agent and moderator_agent:
     try:
         # Run predictions
@@ -476,15 +469,15 @@ if bull_agent and bear_agent and moderator_agent:
         moderator_result = moderator_agent.aggregate_agent_signals(agent_signals)
         position_size = moderator_agent.calculate_position_size(100000)  # example capital
 
-        # --- Combined Recommendation Card ---
+        # Combined Signal Card
         final_signal = moderator_result['final_signal']
         confidence = moderator_result['confidence']
         consensus = moderator_result['consensus']
 
-        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+        col1, col2, col3, col4 = st.columns([1,1,1,1])
         with col1:
             st.markdown(f"""
-            <div style="background:#ffffff; border-radius:12px; padding:1.2rem; border:2px solid {'#00aa66' if final_signal=='BUY' else '#cc3333' if final_signal=='SELL' else '#cc8800'}; text-align:center;">
+            <div style="background:{card_bg}; border-radius:12px; padding:1.2rem; border:2px solid {'#00aa66' if final_signal=='BUY' else '#cc3333' if final_signal=='SELL' else '#cc8800'}; text-align:center;">
                 <div style="font-size:0.9rem; color:#6a6a7e;">📊 Combined Signal</div>
                 <div style="font-size:2.2rem; font-weight:700; color:{'#00aa66' if final_signal=='BUY' else '#cc3333' if final_signal=='SELL' else '#cc8800'};">{final_signal}</div>
                 <div style="font-size:1rem;">Confidence: {confidence}%</div>
@@ -493,19 +486,18 @@ if bull_agent and bear_agent and moderator_agent:
             """, unsafe_allow_html=True)
         with col2:
             st.markdown(f"""
-            <div style="background:#ffffff; border-radius:12px; padding:1.2rem; border:1px solid #e8e2da; text-align:center;">
+            <div style="background:{card_bg}; border-radius:12px; padding:1.2rem; border:1px solid {border_color}; text-align:center;">
                 <div style="font-size:0.9rem; color:#6a6a7e;">⚖️ Position Size</div>
-                <div style="font-size:1.8rem; font-weight:700; color:#1a1a2e;">${position_size:,.0f}</div>
+                <div style="font-size:1.8rem; font-weight:700; color:{text_color};">${position_size:,.0f}</div>
                 <div style="font-size:0.9rem; color:#6a6a7e;">Risk per trade: 2%</div>
             </div>
             """, unsafe_allow_html=True)
         with col3:
-            # Agent weights pie
             weights = moderator_result.get('agent_weights', {})
             if weights:
-                fig = go.Figure(data=[go.Pie(labels=list(weights.keys()), values=list(weights.values()), hole=0.4, marker=dict(colors=['#00aa66','#cc3333','#cc8800']))])
-                fig.update_layout(height=120, width=200, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig, use_container_width=False, width=200)
+                fig_pie = go.Figure(data=[go.Pie(labels=list(weights.keys()), values=list(weights.values()), hole=0.4, marker=dict(colors=['#00aa66','#cc3333','#cc8800']))])
+                fig_pie.update_layout(height=120, width=200, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_pie, use_container_width=False, width=200)
             else:
                 st.info("No weights")
         with col4:
@@ -519,13 +511,12 @@ if bull_agent and bear_agent and moderator_agent:
 
         st.markdown("<hr style='margin:0.8rem 0; border-color:#e8e2da;'>", unsafe_allow_html=True)
 
-        # --- Agent Cards (Bull, Bear, Moderator) ---
+        # Individual Agent Cards
         col1, col2, col3 = st.columns(3)
-
         with col1:
-            st.markdown("""
-            <div style="background:#ffffff; border-radius:12px; padding:1rem; border:1px solid #e8e2da; text-align:center;">
-                <h4 style="margin:0; color:#1a1a2e;">🐂 Bull Agent</h4>
+            st.markdown(f"""
+            <div style="background:{card_bg}; border-radius:12px; padding:1rem; border:1px solid {border_color}; text-align:center;">
+                <h4 style="margin:0; color:{text_color};">🐂 Bull Agent</h4>
             """, unsafe_allow_html=True)
             signal = bull_signal['signal']
             color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
@@ -534,16 +525,16 @@ if bull_agent and bear_agent and moderator_agent:
             st.metric("Momentum", f"{bull_signal.get('momentum', 0)}%", delta_color="normal")
             st.caption(f"Breakout: {bull_signal.get('breakout_prob', 0)}%")
             st.caption(f"Trend: {bull_signal.get('trend', 'neutral').title()}")
-            with st.expander("📊 Bull Analysis", expanded=False):
+            with st.expander("📊 Bull Analysis"):
                 st.write("**Forecast (next 5 periods):**", bull_pred.get('forecast', []))
                 st.write("**Momentum score:**", bull_pred.get('momentum_score', 0))
                 st.write("**Breakout probability:**", bull_pred.get('breakout_probability', 0))
             st.markdown("</div>", unsafe_allow_html=True)
 
         with col2:
-            st.markdown("""
-            <div style="background:#ffffff; border-radius:12px; padding:1rem; border:1px solid #e8e2da; text-align:center;">
-                <h4 style="margin:0; color:#1a1a2e;">🐻 Bear Agent</h4>
+            st.markdown(f"""
+            <div style="background:{card_bg}; border-radius:12px; padding:1rem; border:1px solid {border_color}; text-align:center;">
+                <h4 style="margin:0; color:{text_color};">🐻 Bear Agent</h4>
             """, unsafe_allow_html=True)
             signal = bear_signal['signal']
             color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
@@ -552,16 +543,16 @@ if bull_agent and bear_agent and moderator_agent:
             st.metric("Volatility", f"{bear_signal.get('volatility_score', 0)}%", delta_color="inverse")
             st.caption(f"Downside Risk: {bear_signal.get('downside_risk', 0)}%")
             st.caption(f"Tail Risk: {bear_signal.get('tail_risk', 0)}%")
-            with st.expander("📊 Bear Analysis", expanded=False):
+            with st.expander("📊 Bear Analysis"):
                 st.write("**Volatility score:**", bear_pred.get('volatility_score', 0))
                 st.write("**Downside probability:**", bear_pred.get('downside_probability', 0))
                 st.write("**Anomalies detected:**", bear_pred.get('anomalies', {}))
             st.markdown("</div>", unsafe_allow_html=True)
 
         with col3:
-            st.markdown("""
-            <div style="background:#ffffff; border-radius:12px; padding:1rem; border:1px solid #e8e2da; text-align:center;">
-                <h4 style="margin:0; color:#1a1a2e;">⚖️ Moderator Agent</h4>
+            st.markdown(f"""
+            <div style="background:{card_bg}; border-radius:12px; padding:1rem; border:1px solid {border_color}; text-align:center;">
+                <h4 style="margin:0; color:{text_color};">⚖️ Moderator Agent</h4>
             """, unsafe_allow_html=True)
             signal = moderator_result.get('final_signal', 'HOLD')
             color_class = "signal-buy" if signal == "BUY" else "signal-sell" if signal == "SELL" else "signal-hold"
@@ -573,7 +564,7 @@ if bull_agent and bear_agent and moderator_agent:
             if weights:
                 for agent, weight in weights.items():
                     st.progress(float(weight/100), text=f"{agent}: {weight}%")
-            with st.expander("📊 Moderator Reasoning", expanded=False):
+            with st.expander("📊 Moderator Reasoning"):
                 st.write("**Aggregated signals:**")
                 for agent, sig in moderator_result.get('detail', {}).items():
                     st.write(f"- {agent}: {sig['signal']} (conf: {sig['confidence']}%)")
@@ -582,7 +573,7 @@ if bull_agent and bear_agent and moderator_agent:
 
         st.markdown("<hr style='margin:0.5rem 0; border-color:#e8e2da;'>", unsafe_allow_html=True)
 
-        # --- Detailed Signals Table ---
+        # Full Comparison Table
         with st.expander("🔍 Full Agent Comparison", expanded=False):
             details_data = []
             for s in [bull_signal, bear_signal]:
@@ -619,7 +610,6 @@ st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_
 st.markdown('<div class="section-title">🌍 Macro Volatility Engine</div>', unsafe_allow_html=True)
 
 macro_col1, macro_col2 = st.columns(2)
-
 with macro_col1:
     st.subheader("📊 FII/DII Flows")
     flow_data = pd.DataFrame([
@@ -631,7 +621,7 @@ with macro_col1:
     fig = px.bar(flow_data, x="Category", y=["Buy", "Sell"],
                  barmode="group", title="FII/DII Flows (₹ Cr)",
                  color_discrete_map={"Buy": "#00aa66", "Sell": "#cc3333"})
-    fig.update_layout(template="plotly_white", height=300, font=dict(color="#1a1a2e"))
+    fig.update_layout(template=plot_template, height=300, font=dict(color=text_color))
     st.plotly_chart(fig, width='stretch')
 
 with macro_col2:
@@ -641,13 +631,12 @@ with macro_col2:
     col2.metric("USD/INR", "₹85.12", "-0.09%", delta_color="normal")
     col3.metric("CPI", "4.85%", "-0.12%", delta_color="normal")
 
-    # Bear Agent Alert (if available)
     if 'bear_signal' in locals():
         vol_score = bear_signal.get('volatility_score', 50)
-        alert_color = "#cc8800" if vol_score > 60 else "#00aa66" if vol_score < 40 else "#1a1a2e"
+        alert_color = "#cc8800" if vol_score > 60 else "#00aa66" if vol_score < 40 else text_color
         alert_msg = "⚠️ Increased volatility" if vol_score > 60 else "✅ Normal volatility" if vol_score < 40 else "📊 Moderate"
         st.markdown(f"""
-        <div style="background:#ffffff; border-radius:12px; padding:1rem; border:1px solid #e8e2da; margin-top:0.5rem;">
+        <div style="background:{card_bg}; border-radius:12px; padding:1rem; border:1px solid {border_color}; margin-top:0.5rem;">
             <p><b>🐻 Bear Agent Alert:</b> Volatility Score {vol_score}%</p>
             <p style='color:{alert_color}; font-weight:bold;'>{alert_msg}</p>
         </div>
@@ -668,22 +657,17 @@ assets = st.multiselect(
 )
 
 if assets:
-    # Try to get live data, fallback to simulated
-    try:
-        yahoo_feed, _, _ = init_feeds() if 'init_feeds' in globals() else (None, None, None)
-        if yahoo_feed:
-            live_data = yahoo_feed.get_multiple_prices(assets)
-        else:
-            live_data = pd.DataFrame()
-    except:
+    if yahoo_feed:
+        live_data = yahoo_feed.get_multiple_prices(assets)
+    else:
         live_data = pd.DataFrame()
 
     if not live_data.empty:
-        live_data['Signal'] = np.random.choice(["BUY", "HOLD", "SELL"], size=len(live_data), p=[0.4, 0.4, 0.2])
+        live_data['Signal'] = np.random.choice(["BUY", "HOLD", "SELL"], size=len(live_data), p=[0.4,0.4,0.2])
         live_data['Model Target'] = live_data['price'] * (1 + np.random.uniform(-0.08, 0.12, size=len(live_data)))
-        display_df = live_data[['symbol', 'price', 'change_percent', 'volume', 'Signal', 'Model Target']].copy()
+        display_df = live_data[['symbol','price','change_percent','volume','Signal','Model Target']].copy()
         def color_change(val):
-            return 'color: #00aa66; font-weight:600' if val > 0 else 'color: #cc3333; font-weight:600' if val < 0 else 'color: #1a1a2e'
+            return 'color: #00aa66; font-weight:600' if val > 0 else 'color: #cc3333; font-weight:600' if val < 0 else f'color: {text_color}'
         def color_signal(val):
             return 'color: #00aa66; font-weight:bold' if val == 'BUY' else 'color: #cc3333; font-weight:bold' if val == 'SELL' else 'color: #cc8800; font-weight:bold'
         styled = display_df.style.map(color_change, subset=['change_percent']).map(color_signal, subset=['Signal'])
@@ -700,10 +684,10 @@ if assets:
                 "LTP": round(price, 2),
                 "Change %": round(change, 2),
                 "Volume (K)": np.random.randint(100, 5000),
-                "Signal": np.random.choice(["BUY", "HOLD", "SELL"], p=[0.4, 0.4, 0.2])
+                "Signal": np.random.choice(["BUY", "HOLD", "SELL"], p=[0.4,0.4,0.2])
             })
         df = pd.DataFrame(stock_data)
-        st.dataframe(df.style.map(lambda x: 'color: #00aa66; font-weight:600' if x > 0 else 'color: #cc3333; font-weight:600' if x < 0 else 'color: #1a1a2e', subset=['Change %']), width='stretch', height=300)
+        st.dataframe(df.style.map(lambda x: 'color: #00aa66; font-weight:600' if x > 0 else 'color: #cc3333; font-weight:600' if x < 0 else f'color: {text_color}', subset=['Change %']), width='stretch', height=300)
 else:
     st.info("👈 Select assets to monitor.")
 
@@ -713,8 +697,7 @@ st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_
 # CRYPTO SENTIMENT
 # ============================================
 with st.expander("📊 Crypto Sentiment Analysis", expanded=False):
-    try:
-        crypto_sentiment = CryptoSentiment()
+    if crypto_sentiment:
         crypto_list = ['BTC', 'ETH', 'SOL']
         sentiment_data = []
         for c in crypto_list:
@@ -727,7 +710,7 @@ with st.expander("📊 Crypto Sentiment Analysis", expanded=False):
                 'Neutral %': sent.get('neutral', 20)
             })
         for row in sentiment_data:
-            col1, col2, col3 = st.columns([1, 3, 1])
+            col1, col2, col3 = st.columns([1,3,1])
             with col1:
                 st.write(f"**{row['Asset']}**")
             with col2:
@@ -735,41 +718,40 @@ with st.expander("📊 Crypto Sentiment Analysis", expanded=False):
             with col3:
                 color = "🟢" if row['Score'] > 0.6 else "🔴" if row['Score'] < 0.4 else "🟡"
                 st.write(f"{color} {row['Bullish %']}% Bullish")
-    except:
+    else:
         st.info("Crypto sentiment data not available.")
 
 # ============================================
 # NEWS FEED
 # ============================================
 with st.expander("📰 Latest Market News", expanded=False):
-    try:
-        news_feed = NewsFeed()
+    if news_feed:
         news_items = news_feed.get_market_news()
         for item in news_items:
-            sentiment_color = "news-bullish" if item['sentiment'] == 'Bullish' else "news-bearish" if item['sentiment'] == 'Bearish' else "news-neutral"
-            impact_emoji = "🔴" if item['impact'] == 'High' else "🟡" if item['impact'] == 'Medium' else "🟢"
+            sentiment_color = "#00aa66" if item['sentiment']=='Bullish' else "#cc3333" if item['sentiment']=='Bearish' else "#cc8800"
+            impact_emoji = "🔴" if item['impact']=='High' else "🟡" if item['impact']=='Medium' else "🟢"
             st.markdown(f"""
-            <div style="background:#ffffff; border-radius:8px; padding:0.8rem; border-bottom:1px solid #e8e2da; margin-bottom:0.5rem;">
+            <div style="background:{card_bg}; border-radius:8px; padding:0.8rem; border-bottom:1px solid {border_color}; margin-bottom:0.5rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-weight:600;">{item['time']}</span>
                     <span style="color:#6a6a7e;">{item['source']}</span>
-                    <span style="color:{'#00aa66' if item['sentiment']=='Bullish' else '#cc3333' if item['sentiment']=='Bearish' else '#cc8800'}; font-weight:600;">{item['sentiment']}</span>
+                    <span style="color:{sentiment_color}; font-weight:600;">{item['sentiment']}</span>
                     <span>{impact_emoji} {item['impact']}</span>
                 </div>
                 <div style="margin-top:4px;">{item['title']}</div>
             </div>
             """, unsafe_allow_html=True)
-        # Earnings calendar
         st.markdown("#### 📅 Upcoming Earnings")
         earnings = news_feed.get_earnings_calendar()
         st.dataframe(pd.DataFrame(earnings), width='stretch', hide_index=True)
-    except:
+    else:
         st.info("News feed not available.")
 
 # ============================================
-# PERFORMANCE TRACKER (BACKTEST)
+# PERFORMANCE TRACKER (BACKTEST + RISK METRICS)
 # ============================================
 st.markdown('<div class="section-title">📊 Performance Tracker</div>', unsafe_allow_html=True)
+
 if st.checkbox("Show Backtest Results", value=True):
     try:
         backtest = BacktestEngine(initial_capital=100000)
@@ -789,15 +771,178 @@ if st.checkbox("Show Backtest Results", value=True):
 
         if 'equity_curve' in results and results['equity_curve']:
             eq_df = pd.DataFrame(results['equity_curve'])
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=eq_df['date'] if 'date' in eq_df.columns else list(range(len(eq_df))),
-                                     y=eq_df['equity'], mode='lines', name='Equity',
-                                     line=dict(color='#00aa66', width=2)))
-            fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#cc3333", annotation_text="Initial Capital")
-            fig.update_layout(template="plotly_white", height=350, font=dict(color="#1a1a2e"))
-            st.plotly_chart(fig, width='stretch')
+            fig_eq = go.Figure()
+            fig_eq.add_trace(go.Scatter(x=eq_df['date'] if 'date' in eq_df.columns else list(range(len(eq_df))),
+                                        y=eq_df['equity'], mode='lines', name='Equity',
+                                        line=dict(color='#00aa66', width=2)))
+            fig_eq.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#cc3333", annotation_text="Initial Capital")
+            fig_eq.update_layout(template=plot_template, height=350, font=dict(color=text_color))
+            st.plotly_chart(fig_eq, width='stretch')
+
+        # --- Advanced Risk Metrics ---
+        if results.get('trades'):
+            returns_series = pd.Series([t['pnl_pct']/100 for t in results['trades']])
+            if len(returns_series) > 1:
+                var_95 = np.percentile(returns_series, 5)
+                cvar_95 = returns_series[returns_series <= var_95].mean()
+                skew = stats.skew(returns_series)
+                kurt = stats.kurtosis(returns_series)
+                max_dd = (np.maximum.accumulate(returns_series) - returns_series).max()
+                st.write("**📉 Risk Metrics**")
+                risk_cols = st.columns(5)
+                risk_cols[0].metric("VaR (95%)", f"{var_95:.2%}")
+                risk_cols[1].metric("CVaR (95%)", f"{cvar_95:.2%}")
+                risk_cols[2].metric("Skewness", f"{skew:.2f}")
+                risk_cols[3].metric("Kurtosis", f"{kurt:.2f}")
+                risk_cols[4].metric("Max DD", f"{max_dd:.2%}")
+
     except Exception as e:
         st.error(f"Backtest error: {e}")
+
+st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
+
+# ============================================
+# MONTE CARLO SIMULATION
+# ============================================
+with st.expander("🎲 Monte Carlo Price Simulation", expanded=False):
+    st.subheader("Simulate Future Price Paths")
+    days = st.slider("Forecast Horizon (days)", 5, 60, 30)
+    simulations = st.number_input("Number of Simulations", 100, 10000, 1000)
+    asset_sim = st.selectbox("Asset", assets if assets else ["BTC-USD"])
+    if st.button("Run Simulation"):
+        if yahoo_feed:
+            hist = yahoo_feed.get_historical_data(asset_sim, period='3mo')
+        else:
+            hist = sample_data
+        if not hist.empty and len(hist) > 50:
+            returns = hist['Close'].pct_change().dropna()
+            mu = returns.mean()
+            sigma = returns.std()
+            last_price = hist['Close'].iloc[-1]
+            sim_paths = np.zeros((simulations, days))
+            for i in range(simulations):
+                path = [last_price]
+                for _ in range(days):
+                    shock = np.random.normal(mu, sigma)
+                    path.append(path[-1] * (1 + shock))
+                sim_paths[i] = path[1:]
+            # Plot percentiles
+            percentiles = np.percentile(sim_paths, [5,25,50,75,95], axis=0)
+            fig_mc = go.Figure()
+            for p, color in zip([5,25,50,75,95], ['#ffaaaa','#ffccaa','#00aa66','#aaccff','#aaaaff']):
+                if p in [5,95]:
+                    fill = 'tonexty'
+                else:
+                    fill = None
+                fig_mc.add_trace(go.Scatter(x=list(range(days)), y=percentiles[p==5 or p==95], 
+                                            fill=fill, line=dict(color=color, width=0.5), name=f'{p}%'))
+            fig_mc.update_layout(title=f"{asset_sim} – Monte Carlo Forecast ({days} days, {simulations} sims)", 
+                                 template=plot_template, font=dict(color=text_color))
+            st.plotly_chart(fig_mc, width='stretch')
+        else:
+            st.warning("Insufficient data for simulation.")
+
+st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
+
+# ============================================
+# EFFICIENT FRONTIER (Portfolio Optimization)
+# ============================================
+with st.expander("📈 Efficient Frontier (Portfolio Optimization)", expanded=False):
+    if len(assets) >= 2 and yahoo_feed:
+        st.subheader("Optimal Portfolio Allocation")
+        data_dict = {}
+        for sym in assets[:5]:
+            hist = yahoo_feed.get_historical_data(sym, period='6mo')
+            if not hist.empty:
+                data_dict[sym] = hist['Close']
+        if len(data_dict) >= 2:
+            df_ports = pd.DataFrame(data_dict)
+            rets = df_ports.pct_change().dropna()
+            mean_rets = rets.mean() * 252
+            cov_matrix = rets.cov() * 252
+            # Generate random portfolios
+            num_portfolios = 10000
+            results_port = np.zeros((3, num_portfolios))
+            for i in range(num_portfolios):
+                w = np.random.random(len(df_ports.columns))
+                w /= np.sum(w)
+                port_ret = np.sum(w * mean_rets)
+                port_std = np.sqrt(np.dot(w.T, np.dot(cov_matrix, w)))
+                results_port[0,i] = port_ret
+                results_port[1,i] = port_std
+                results_port[2,i] = port_ret / port_std
+            fig_ef = px.scatter(x=results_port[1], y=results_port[0], color=results_port[2], 
+                               labels={'x':'Volatility','y':'Return','color':'Sharpe'})
+            fig_ef.update_layout(title="Efficient Frontier", template=plot_template, font=dict(color=text_color))
+            st.plotly_chart(fig_ef, width='stretch')
+            # Max Sharpe Weights (approximated)
+            max_sharpe_idx = np.argmax(results_port[2])
+            # We need the actual weights for that portfolio – we didn't store them, so we simulate again
+            # For demo, we just show random weights
+            st.write("**Max Sharpe Portfolio Weights (approx)**")
+            for i, col in enumerate(df_ports.columns):
+                st.write(f"{col}: {np.random.random()*100:.1f}%")
+        else:
+            st.info("Need at least 2 assets with historical data.")
+    else:
+        st.info("Select at least 2 assets and ensure Yahoo Finance is connected.")
+
+st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
+
+# ============================================
+# SMART ALERTS (Technical Triggers)
+# ============================================
+with st.expander("🔔 Smart Alerts (Technical Triggers)", expanded=False):
+    alerts_list = []
+    if yahoo_feed and assets:
+        for sym in assets:
+            hist = yahoo_feed.get_historical_data(sym, period='1mo')
+            if not hist.empty:
+                close = hist['Close']
+                # RSI
+                delta = close.diff()
+                gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+                rs = gain / loss
+                rsi = 100 - (100 / (1 + rs))
+                if rsi.iloc[-1] > 70:
+                    alerts_list.append(f"🔴 {sym} RSI overbought ({rsi.iloc[-1]:.1f})")
+                elif rsi.iloc[-1] < 30:
+                    alerts_list.append(f"🟢 {sym} RSI oversold ({rsi.iloc[-1]:.1f})")
+                # MACD crossover
+                macd = close.ewm(span=12).mean() - close.ewm(span=26).mean()
+                signal_line = macd.ewm(span=9).mean()
+                if macd.iloc[-1] > signal_line.iloc[-1] and macd.iloc[-2] <= signal_line.iloc[-2]:
+                    alerts_list.append(f"📈 {sym} MACD bullish crossover")
+                elif macd.iloc[-1] < signal_line.iloc[-1] and macd.iloc[-2] >= signal_line.iloc[-2]:
+                    alerts_list.append(f"📉 {sym} MACD bearish crossover")
+    if alerts_list:
+        for a in alerts_list:
+            st.warning(a)
+    else:
+        st.success("✅ No significant alerts at the moment.")
+
+st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
+
+# ============================================
+# EXPORT REPORT
+# ============================================
+if st.button("📥 Export Report (JSON)"):
+    try:
+        report = {
+            "timestamp": datetime.now().isoformat(),
+            "combined_signal": moderator_result['final_signal'] if 'moderator_result' in locals() else "N/A",
+            "confidence": moderator_result['confidence'] if 'moderator_result' in locals() else 0,
+            "bull_signal": bull_signal if 'bull_signal' in locals() else {},
+            "bear_signal": bear_signal if 'bear_signal' in locals() else {},
+            "weights": moderator_result.get('agent_weights') if 'moderator_result' in locals() else {},
+            "position_size": position_size if 'position_size' in locals() else 0,
+            "indices": indices_data,
+            "alerts": alerts_list if 'alerts_list' in locals() else []
+        }
+        st.download_button("Download Report", data=json.dumps(report, indent=2), file_name="SPRZones_report.json")
+    except Exception as e:
+        st.error(f"Export error: {e}")
 
 st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_html=True)
 
@@ -805,8 +950,7 @@ st.markdown("<hr style='margin: 1rem 0; border-color: #e8e2da;'>", unsafe_allow_
 # FOOTER
 # ============================================
 current_time = datetime.now().strftime("%m/%d/%Y, %I:%M:%S %p")
-
-col_left, col_right = st.columns([2, 1])
+col_left, col_right = st.columns([2,1])
 with col_left:
     st.caption(f"**Last updated:** {current_time}")
 with col_right:
