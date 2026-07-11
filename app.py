@@ -315,7 +315,6 @@ with st.expander("🔍 Detailed Agent Analysis", expanded=False):
         details_data.append(row)
     
     details_df = pd.DataFrame(details_data)
-    # FIX: use width='stretch' instead of use_container_width=True
     st.dataframe(details_df, width='stretch', hide_index=True)
 
 st.divider()
@@ -345,7 +344,6 @@ with macro_col1:
                          color_discrete_map={"Buy": "#00ff88", "Sell": "#ff4444"})
             fig.update_layout(template="plotly_dark", height=350)
             fig.update_xaxis(tickangle=15)
-            # FIX: use width='stretch' instead of use_container_width=True
             st.plotly_chart(fig, width='stretch')
         else:
             st.info("📡 FII/DII data not available. Using simulated data.")
@@ -469,10 +467,10 @@ if assets:
             return 'color: #ff4444; font-weight: bold'
         return 'color: #ffaa00; font-weight: bold'
     
-    styled_df = stock_df.style.applymap(color_change, subset=['Change %'])
-    styled_df = styled_df.applymap(color_signal, subset=['Signal'])
+    # FIX: Use .map() instead of .applymap() (pandas 2.1+)
+    styled_df = stock_df.style.map(color_change, subset=['Change %'])
+    styled_df = styled_df.map(color_signal, subset=['Signal'])
     
-    # FIX: use width='stretch' instead of use_container_width=True
     st.dataframe(styled_df, width='stretch', height=200)
     
     col1, col2, col3 = st.columns(3)
@@ -528,7 +526,6 @@ if show_backtest:
             ))
             fig.add_hline(y=backtest.initial_capital, line_dash="dash", line_color="#ff4444", annotation_text="Initial Capital")
             fig.update_layout(template="plotly_dark", height=400, title="Equity Curve", xaxis_title="Date" if 'date' in equity_df.columns else "Trade #", yaxis_title="Capital ($)")
-            # FIX: use width='stretch' instead of use_container_width=True
             st.plotly_chart(fig, width='stretch')
         else:
             st.info("📈 Equity curve data not available")
