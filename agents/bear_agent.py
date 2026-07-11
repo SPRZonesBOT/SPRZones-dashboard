@@ -43,14 +43,14 @@ class BearAgent(BaseAgent):
         self.model = GRUModel(input_size=len(self.volatility_features))
         if self.model_path:
             try:
-                # FIX: Use weights_only=False for PyTorch 2.6+
                 state_dict = torch.load(self.model_path, map_location='cpu', weights_only=False)
                 self.model.load_state_dict(state_dict)
                 print(f"✅ Bear Agent: Model loaded from {self.model_path}")
             except FileNotFoundError:
                 print(f"⚠️ Bear Agent: Model file {self.model_path} not found. Using untrained model.")
             except Exception as e:
-                print(f"⚠️ Bear Agent: Error loading model: {e}. Using untrained model.")
+                print(f"⚠️ Bear Agent: Model file corrupted ({e}). Using untrained model.")
+                self.model = GRUModel(input_size=len(self.volatility_features))
         else:
             print("ℹ️ Bear Agent: No model path provided. Using untrained model.")
         self.model.eval()
