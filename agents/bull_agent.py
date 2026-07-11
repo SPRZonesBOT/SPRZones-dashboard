@@ -41,14 +41,15 @@ class BullAgent(BaseAgent):
         self.model = LSTMPredictor(input_size=len(self.feature_cols))
         if self.model_path:
             try:
-                # FIX: Use weights_only=False for PyTorch 2.6+
                 state_dict = torch.load(self.model_path, map_location='cpu', weights_only=False)
                 self.model.load_state_dict(state_dict)
                 print(f"✅ Bull Agent: Model loaded from {self.model_path}")
             except FileNotFoundError:
                 print(f"⚠️ Bull Agent: Model file {self.model_path} not found. Using untrained model.")
             except Exception as e:
-                print(f"⚠️ Bull Agent: Error loading model: {e}. Using untrained model.")
+                print(f"⚠️ Bull Agent: Model file corrupted ({e}). Using untrained model.")
+                # Reinitialize with random weights
+                self.model = LSTMPredictor(input_size=len(self.feature_cols))
         else:
             print("ℹ️ Bull Agent: No model path provided. Using untrained model.")
         self.model.eval()
