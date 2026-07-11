@@ -30,79 +30,174 @@ st.set_page_config(
 )
 
 # ============================================
-# CUSTOM CSS
+# CUSTOM CSS - LIGHTER BACKGROUND & LARGER FONTS
 # ============================================
 st.markdown("""
 <style>
+    /* Main background - lighter */
     .stApp {
-        background-color: #0e1117;
-        color: #f0f2f6;
+        background-color: #1a1f2e;
+        color: #e8edf5;
     }
+    
+    /* Main content area */
+    .main > div {
+        background-color: #1a1f2e;
+    }
+    
+    /* Sidebar - lighter */
     .css-1d391kg {
-        background-color: #1e2433;
+        background-color: #232838;
     }
+    
+    /* Cards - lighter */
     .metric-card {
-        background-color: #1e2433;
+        background-color: #232838;
         border-radius: 10px;
-        padding: 15px;
-        border: 1px solid #2d3748;
+        padding: 18px;
+        border: 1px solid #3a4055;
         margin: 5px 0;
     }
     .metric-card:hover {
-        border-color: #4a5568;
+        border-color: #5a6080;
         transition: 0.3s;
     }
+    
+    /* Headers - larger */
+    h1, h2, h3, h4, h5, h6 {
+        color: #e8edf5 !important;
+        font-weight: 600 !important;
+    }
+    h1 { font-size: 2.5rem !important; }
+    h2 { font-size: 2rem !important; }
+    h3 { font-size: 1.6rem !important; }
+    h4 { font-size: 1.3rem !important; }
+    
+    /* Metric labels - larger */
+    .stMetricLabel {
+        font-size: 1.1rem !important;
+        color: #a0aec0 !important;
+    }
+    .stMetricValue {
+        font-size: 2.2rem !important;
+        font-weight: 600 !important;
+    }
+    .stMetricDelta {
+        font-size: 1.1rem !important;
+    }
+    
+    /* Signal text - larger */
     .signal-buy {
         color: #00ff88;
         font-weight: bold;
-        font-size: 28px;
+        font-size: 32px;
     }
     .signal-sell {
         color: #ff4444;
         font-weight: bold;
-        font-size: 28px;
+        font-size: 32px;
     }
     .signal-hold {
         color: #ffaa00;
         font-weight: bold;
-        font-size: 28px;
+        font-size: 32px;
     }
+    
+    /* Dataframe text */
+    .dataframe {
+        font-size: 1rem !important;
+    }
+    .dataframe td, .dataframe th {
+        padding: 8px 12px !important;
+    }
+    
+    /* Caption text */
+    .stCaption {
+        font-size: 0.95rem !important;
+        color: #8892a8 !important;
+    }
+    
+    /* Section headers */
     .section-header {
-        border-bottom: 2px solid #2d3748;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
+        border-bottom: 2px solid #3a4055;
+        padding-bottom: 12px;
+        margin-bottom: 24px;
     }
+    
+    /* Live indicator */
     .live-indicator {
         color: #ff4444;
         animation: blink 1s infinite;
+        font-size: 1.1rem;
     }
     @keyframes blink {
         0% { opacity: 1; }
         50% { opacity: 0; }
         100% { opacity: 1; }
     }
+    
+    /* News styling */
     .news-bullish {
         color: #00ff88;
+        font-weight: 600;
     }
     .news-bearish {
         color: #ff4444;
+        font-weight: 600;
     }
     .news-neutral {
         color: #ffaa00;
+        font-weight: 600;
     }
+    
+    /* Scrollbar */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
     }
     ::-webkit-scrollbar-track {
-        background: #0e1117;
+        background: #1a1f2e;
     }
     ::-webkit-scrollbar-thumb {
-        background: #2d3748;
+        background: #3a4055;
         border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: #4a5568;
+        background: #5a6080;
+    }
+    
+    /* Expander header */
+    .streamlit-expanderHeader {
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        color: #e8edf5 !important;
+    }
+    
+    /* Button styling */
+    .stButton button {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        background-color: #2d3748 !important;
+        color: #e8edf5 !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+    }
+    .stButton button:hover {
+        background-color: #3a4055 !important;
+        border-color: #5a6080 !important;
+    }
+    
+    /* Selectbox and inputs */
+    .stSelectbox, .stMultiSelect, .stSlider {
+        font-size: 1rem !important;
+    }
+    
+    /* Progress bar */
+    .stProgress > div {
+        background-color: #2d3748 !important;
+    }
+    .stProgress > div > div {
+        background-color: #00ff88 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -187,7 +282,6 @@ with st.sidebar:
     auto_refresh = st.checkbox("Auto Refresh (30s)", value=False)
     if auto_refresh:
         st.caption("🔄 Auto-refresh enabled")
-        time.sleep(0.1)  # Small delay
     
     if st.button("🔄 Refresh Now", use_container_width=True):
         st.cache_data.clear()
@@ -297,7 +391,7 @@ else:
     st.info("📡 No live data available. Showing simulated data.")
 
 # ============================================
-# GENERATE SAMPLE DATA WITH TECHNICAL INDICATORS
+# GENERATE SAMPLE DATA WITH TECHNICAL INDICATORS - FIXED
 # ============================================
 @st.cache_data(ttl=60)
 def generate_sample_data():
@@ -364,8 +458,8 @@ def generate_sample_data():
     data.loc[60:65, 'close'] -= 12
     data.loc[80:85, 'volume'] *= 3
     
-    # Fill NaN
-    data = data.fillna(method='ffill').fillna(method='bfill')
+    # FIX: Use ffill() and bfill() instead of fillna(method='ffill')
+    data = data.ffill().bfill()
     
     return data
 
@@ -495,7 +589,6 @@ with st.expander("📊 Crypto Sentiment Analysis", expanded=False):
         
         sentiment_df = pd.DataFrame(sentiment_data)
         
-        # Display sentiment as progress bars
         for _, row in sentiment_df.iterrows():
             col1, col2, col3 = st.columns([1, 3, 1])
             with col1:
@@ -518,24 +611,22 @@ if show_news:
         if news_feed:
             news_items = news_feed.get_market_news()
             
-            # Create news display
             for item in news_items:
                 sentiment_color = "news-bullish" if item['sentiment'] == 'Bullish' else "news-bearish" if item['sentiment'] == 'Bearish' else "news-neutral"
                 impact_emoji = "🔴" if item['impact'] == 'High' else "🟡" if item['impact'] == 'Medium' else "🟢"
                 
                 st.markdown(f"""
-                <div style="padding: 10px; border-bottom: 1px solid #2d3748;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: bold;">{item['time']}</span>
-                        <span style="color: #666;">{item['source']}</span>
-                        <span class="{sentiment_color}">{item['sentiment']}</span>
-                        <span>{impact_emoji} {item['impact']}</span>
+                <div style="padding: 12px; border-bottom: 1px solid #3a4055; background-color: #1a1f2e; border-radius: 5px; margin: 5px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; font-size: 1rem;">{item['time']}</span>
+                        <span style="color: #8892a8; font-size: 0.95rem;">{item['source']}</span>
+                        <span class="{sentiment_color}" style="font-size: 1rem;">{item['sentiment']}</span>
+                        <span style="font-size: 1rem;">{impact_emoji} {item['impact']}</span>
                     </div>
-                    <div style="margin-top: 5px;">{item['title']}</div>
+                    <div style="margin-top: 8px; font-size: 1.05rem;">{item['title']}</div>
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Earnings calendar
             st.markdown("### 📅 Upcoming Earnings")
             earnings = news_feed.get_earnings_calendar()
             earnings_df = pd.DataFrame(earnings)
@@ -551,7 +642,6 @@ st.divider()
 st.header("📈 Active Stock Monitor")
 st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
 
-# Get live stock data
 @st.cache_data(ttl=30)
 def get_live_stock_data(asset_list):
     if yahoo_feed:
@@ -562,23 +652,22 @@ if assets:
     live_stock_data = get_live_stock_data(assets)
     
     if not live_stock_data.empty:
-        # Add signal column (simulated)
         live_stock_data['Signal'] = np.random.choice(["BUY", "HOLD", "SELL"], size=len(live_stock_data), p=[0.4, 0.4, 0.2])
         live_stock_data['Model Target'] = live_stock_data['price'] * (1 + np.random.uniform(-0.08, 0.12, size=len(live_stock_data)))
         
         def color_change(val):
             if val > 0:
-                return 'color: #00ff88'
+                return 'color: #00ff88; font-weight: 600'
             elif val < 0:
-                return 'color: #ff4444'
+                return 'color: #ff4444; font-weight: 600'
             return 'color: #ffffff'
         
         def color_signal(val):
             if val == 'BUY':
-                return 'color: #00ff88; font-weight: bold'
+                return 'color: #00ff88; font-weight: bold; font-size: 1.05rem'
             elif val == 'SELL':
-                return 'color: #ff4444; font-weight: bold'
-            return 'color: #ffaa00; font-weight: bold'
+                return 'color: #ff4444; font-weight: bold; font-size: 1.05rem'
+            return 'color: #ffaa00; font-weight: bold; font-size: 1.05rem'
         
         styled_df = live_stock_data.style.map(color_change, subset=['change_percent'])
         styled_df = styled_df.map(color_signal, subset=['Signal'])
@@ -586,10 +675,9 @@ if assets:
         st.dataframe(
             styled_df[['symbol', 'price', 'change_percent', 'volume', 'Signal', 'Model Target']],
             width='stretch',
-            height=300
+            height=350
         )
     else:
-        # Fallback simulated data
         stock_data = []
         for asset in assets:
             base_price = np.random.uniform(200, 2500)
@@ -607,22 +695,22 @@ if assets:
         
         def color_change(val):
             if val > 0:
-                return 'color: #00ff88'
+                return 'color: #00ff88; font-weight: 600'
             elif val < 0:
-                return 'color: #ff4444'
+                return 'color: #ff4444; font-weight: 600'
             return 'color: #ffffff'
         
         def color_signal(val):
             if val == 'BUY':
-                return 'color: #00ff88; font-weight: bold'
+                return 'color: #00ff88; font-weight: bold; font-size: 1.05rem'
             elif val == 'SELL':
-                return 'color: #ff4444; font-weight: bold'
-            return 'color: #ffaa00; font-weight: bold'
+                return 'color: #ff4444; font-weight: bold; font-size: 1.05rem'
+            return 'color: #ffaa00; font-weight: bold; font-size: 1.05rem'
         
         styled_df = stock_df.style.map(color_change, subset=['Change %'])
         styled_df = styled_df.map(color_signal, subset=['Signal'])
         
-        st.dataframe(styled_df, width='stretch', height=300)
+        st.dataframe(styled_df, width='stretch', height=350)
 else:
     st.info("👈 Please select assets from the sidebar to monitor.")
 
@@ -639,7 +727,6 @@ if show_backtest:
         backtest = BacktestEngine(initial_capital=100000)
         test_data = sample_data.copy()
         
-        # Generate signals
         ma_short = test_data['close'].rolling(5).mean()
         ma_long = test_data['close'].rolling(20).mean()
         signals = (ma_short > ma_long).astype(int)
@@ -670,7 +757,8 @@ if show_backtest:
                 height=400, 
                 title="Equity Curve",
                 xaxis_title="Date" if 'date' in equity_df.columns else "Trade #",
-                yaxis_title="Capital ($)"
+                yaxis_title="Capital ($)",
+                font=dict(size=14)
             )
             st.plotly_chart(fig, width='stretch')
         else:
@@ -688,16 +776,14 @@ st.divider()
 # ============================================
 if show_correlation:
     with st.expander("📊 Asset Correlation Heatmap", expanded=False):
-        # Use live data if available
-        if not live_prices_df.empty and len(live_prices_df) > 1:
-            # Get historical data for correlation
+        if not live_prices_df.empty and len(live_prices_df) > 1 and yahoo_feed:
             correlation_data = {}
-            for symbol in live_prices_df['symbol'].tolist()[:5]:  # Limit to 5 for performance
+            for symbol in live_prices_df['symbol'].tolist()[:5]:
                 hist_data = yahoo_feed.get_historical_data(symbol, period='1d')
                 if not hist_data.empty:
                     correlation_data[symbol] = hist_data['Close']
             
-            if correlation_data:
+            if correlation_data and len(correlation_data) > 1:
                 corr_df = pd.DataFrame(correlation_data)
                 corr_matrix = corr_df.corr()
                 
@@ -709,12 +795,11 @@ if show_correlation:
                     zmin=-1,
                     zmax=1
                 )
-                fig.update_layout(template="plotly_dark", height=400)
+                fig.update_layout(template="plotly_dark", height=400, font=dict(size=14))
                 st.plotly_chart(fig, width='stretch')
             else:
                 st.info("📊 Not enough data for correlation analysis")
         else:
-            # Generate sample correlation
             assets_corr = ['NIFTY', 'BTC', 'ETH', 'Gold', 'Oil']
             np.random.seed(42)
             corr_matrix = np.random.randn(len(assets_corr), len(assets_corr))
@@ -731,7 +816,7 @@ if show_correlation:
                 zmin=-1,
                 zmax=1
             )
-            fig.update_layout(template="plotly_dark", height=400)
+            fig.update_layout(template="plotly_dark", height=400, font=dict(size=14))
             st.plotly_chart(fig, width='stretch')
 
 # ============================================
