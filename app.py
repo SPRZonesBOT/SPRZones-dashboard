@@ -302,7 +302,7 @@ def init_agents():
 bull_agent, bear_agent, moderator_agent = init_agents()
 
 # ============================================
-# HELPER FUNCTIONS (shared across tabs)
+# HELPER FUNCTIONS
 # ============================================
 def add_technicals(df):
     """Add technical indicators to a dataframe (lowercase columns)."""
@@ -425,7 +425,6 @@ def get_sector_heatmap():
         except:
             pass
     df_sector = pd.DataFrame(data)
-    # Ensure numeric
     if not df_sector.empty:
         df_sector['Change %'] = pd.to_numeric(df_sector['Change %'], errors='coerce')
     return df_sector
@@ -451,7 +450,6 @@ with tab1:
         st.markdown("#### Sector Heatmap (Indian Stocks)")
         sector_df = get_sector_heatmap()
         if not sector_df.empty:
-            # FIX: ensure numeric and handle duplicates
             sector_df['Change %'] = pd.to_numeric(sector_df['Change %'], errors='coerce')
             pivot = sector_df.pivot_table(index='Sector', columns='Symbol', values='Change %', aggfunc='mean', fill_value=0)
             fig = px.imshow(pivot, text_auto=True, color_continuous_scale='RdYlGn', title="Sector-wise Performance")
@@ -467,7 +465,8 @@ with tab1:
             "Change %": [3.2, 2.4, 0.12, -1.2]
         }
         df_top = pd.DataFrame(top_data)
-        st.dataframe(df_top.style.applymap(lambda x: 'color: #00aa66' if x > 0 else 'color: #cc3333', subset=['Change %']), width='stretch')
+        # FIX: use .map instead of .applymap
+        st.dataframe(df_top.style.map(lambda x: 'color: #00aa66' if x > 0 else 'color: #cc3333', subset=['Change %']), width='stretch')
 
         st.markdown("#### Economic Calendar (Today)")
         econ_cal = pd.DataFrame({
@@ -561,7 +560,7 @@ with tab2:
             st.warning("Agents not available. Check installation.")
 
 # ============================================
-# TAB 3: SCANNERS & SCREENERS (unchanged, but included for completeness)
+# TAB 3: SCANNERS & SCREENERS (unchanged)
 # ============================================
 with tab3:
     st.markdown("### 🔎 Scanners & Screeners")
@@ -756,7 +755,8 @@ with tab3:
             "Signal": ["BUY", "BUY", "HOLD", "BUY"]
         }
         df_pead = pd.DataFrame(pead_data)
-        st.dataframe(df_pead.style.applymap(lambda x: 'color: #00aa66' if x == 'BUY' else 'color: #cc8800', subset=['Signal']), width='stretch')
+        # FIX: use .map instead of .applymap
+        st.dataframe(df_pead.style.map(lambda x: 'color: #00aa66' if x == 'BUY' else 'color: #cc8800', subset=['Signal']), width='stretch')
 
     with scanner_tabs[5]:
         st.write("### 💰 Penny Stock Screener (Price < $10 or ₹100)")
@@ -834,7 +834,8 @@ with tab5:
                 pass
         if data:
             df_watch = pd.DataFrame(data)
-            st.dataframe(df_watch.style.applymap(lambda x: 'color: #00aa66' if x > 0 else 'color: #cc3333', subset=['Change %']), width='stretch')
+            # FIX: use .map instead of .applymap
+            st.dataframe(df_watch.style.map(lambda x: 'color: #00aa66' if x > 0 else 'color: #cc3333', subset=['Change %']), width='stretch')
         else:
             st.info("No data for watchlist symbols.")
         if st.button("Clear Watchlist"):
