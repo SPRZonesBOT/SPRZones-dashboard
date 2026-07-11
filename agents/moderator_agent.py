@@ -20,27 +20,17 @@ class CrossAttention(nn.Module):
 
 
 class ModeratorAgent(BaseAgent):
-    def __init__(self, model_path: str = "models/moderator_transformer.pth"):
+    def __init__(self, model_path: str = None):
         super().__init__("Moderator", model_path)
         self.agent_outputs = {}
         self.load_model()
     
     def load_model(self):
-        """Load Transformer model with error handling for PyTorch 2.6+"""
+        """Create new Transformer model with random weights (skip file loading)"""
+        print("ℹ️ Moderator Agent: Creating new Transformer model with random weights.")
         self.model = CrossAttention()
-        if self.model_path:
-            try:
-                state_dict = torch.load(self.model_path, map_location='cpu', weights_only=False)
-                self.model.load_state_dict(state_dict)
-                print(f"✅ Moderator Agent: Model loaded from {self.model_path}")
-            except FileNotFoundError:
-                print(f"⚠️ Moderator Agent: Model file {self.model_path} not found. Using untrained model.")
-            except Exception as e:
-                print(f"⚠️ Moderator Agent: Model file corrupted ({e}). Using untrained model.")
-                self.model = CrossAttention()
-        else:
-            print("ℹ️ Moderator Agent: No model path provided. Using untrained model.")
         self.model.eval()
+        print("✅ Moderator Agent: Ready with untrained Transformer model.")
     
     def aggregate_agent_signals(self, agent_signals: List[Dict]) -> Dict[str, Any]:
         self.agent_outputs = {s['agent']: s for s in agent_signals}
