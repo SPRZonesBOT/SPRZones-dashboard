@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Enhanced Market Sentiment Dashboard</title>
+  <title>SPRZones Market Sentiment Dashboard</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h1>SPRZones Market Sentiment Dashboard</h1>
   <p>Last Updated: <span id="update-time"></span></p>
 
-  <!-- Macro Economics Panel -->
+  <!-- Macro Economics -->
   <section>
     <h2>Macro Economics</h2>
     <ul>
@@ -30,9 +32,10 @@
       </thead>
       <tbody id="news-table"></tbody>
     </table>
+    <canvas id="sentimentChart" width="400" height="200"></canvas>
   </section>
 
-  <!-- Social Media Tracker -->
+  <!-- Social Media Sentiment -->
   <section>
     <h2>Social Media Sentiment</h2>
     <p>Twitter/X Mentions: <span id="twitter"></span></p>
@@ -56,6 +59,7 @@
       <li>Gold ETF Flows: <span id="gold-etf"></span></li>
       <li>Bitcoin ETF Flows: <span id="btc-etf"></span></li>
     </ul>
+    <canvas id="etfChart" width="400" height="200"></canvas>
   </section>
 
   <!-- Risks & Considerations -->
@@ -86,15 +90,11 @@
       <thead>
         <tr><th>Asset</th><th>Signal</th><th>Confidence</th><th>Bull Catalyst</th><th>Bear Risk</th><th>Verdict</th><th>Action</th></tr>
       </thead>
-      <tbody>
-        <tr><td>Gold (XAU/USD)</td><td>🟢 Accumulate</td><td>74%</td><td>Inflation hedge, central bank buying</td><td>Fed tightening risk</td><td>Buy dips</td><td>Add</td></tr>
-        <tr><td>Bitcoin (BTC/USD)</td><td>🟢 Strong Buy</td><td>82%</td><td>ETF inflows, whale accumulation</td><td>SEC regulation risk</td><td>Accumulate</td><td>10% weight</td></tr>
-        <tr><td>Ethereum (ETH/USD)</td><td>🟡 Neutral</td><td>55%</td><td>DeFi activity stable</td><td>Gas fees + SEC risk</td><td>Hold</td><td>Wait</td></tr>
-        <tr><td>Altcoins (SOL, ADA)</td><td>🔴 Avoid</td><td>68% (Sell)</td><td>Low liquidity, hype cycles</td><td>Pump/dump risk</td><td>Avoid</td><td>Exit</td></tr>
-      </tbody>
+      <tbody id="confluence-table"></tbody>
     </table>
   </section>
 
+  <!-- JS -->
   <script src="app.js"></script>
 </body>
 </html>
