@@ -20,18 +20,9 @@ function updateDashboard() {
         newsTable.innerHTML += row;
       });
 
-      // Social
-      document.getElementById("twitter").innerText = data.social.twitter_mentions;
-      document.getElementById("reddit").innerText = data.social.reddit_sentiment;
-
-      // On-chain
-      document.getElementById("whale-inflows").innerText = data.onchain.whale_inflows;
-      document.getElementById("stablecoin").innerText = data.onchain.stablecoin_activity;
-      document.getElementById("exchange-reserves").innerText = data.onchain.exchange_reserves;
-
       // ETF
-      document.getElementById("gold-etf").innerText = data.etf.gold_flows;
-      document.getElementById("btc-etf").innerText = data.etf.btc_flows;
+      document.getElementById("gold-etf").innerText = data.etf.gold_flows[data.etf.gold_flows.length-1];
+      document.getElementById("btc-etf").innerText = data.etf.btc_flows[data.etf.btc_flows.length-1];
 
       // Confluence
       const confTable = document.getElementById("confluence-table");
@@ -59,13 +50,13 @@ function updateDashboard() {
           datasets: [
             {
               label: 'Gold ETF Flows',
-              data: [1200, 800, 1500, 1000], // replace with historical data
+              data: data.etf.gold_flows,
               borderColor: 'gold',
               fill: false
             },
             {
               label: 'Bitcoin ETF Flows',
-              data: [850, 900, 1100, 950], // replace with historical data
+              data: data.etf.btc_flows,
               borderColor: 'orange',
               fill: false
             }
