@@ -1,1 +1,34 @@
+{
+  "macro": {
+    "us_yield": "4.25%",
+    "dxy": "105.3",
+    "crude": "$82.5",
+    "fii_dii": "FII +1200 Cr / DII +800 Cr",
+    "fear_greed": "42 (Fear)"
+  },
+  "news": [
+    {"source": "Bloomberg", "headline": "Fed hints at rate cuts", "sentiment": "Bullish"},
+    {"source": "Reuters", "headline": "Crypto ETF inflows surge", "sentiment": "Bullish"},
+    {"source": "CoinDesk", "headline": "Bitcoin whale transfers spike", "sentiment": "Neutral"}
+  ],
+  "social": {
+    "twitter_mentions": "12.4K (Bullish)",
+    "reddit_sentiment": "65% Positive"
+  },
+  "onchain": {
+    "whale_inflows": "3.2K BTC",
+    "stablecoin_activity": "USDT +450M minted",
+    "exchange_reserves": "BTC reserves down 2%"
+  },
+  "etf": {
+    "gold_flows": "+$1.2B inflows",
+    "btc_flows": "+$850M inflows"
+  },
+  "confluence": [
+    {"asset": "Gold (XAU/USD)", "signal": "🟢 Accumulate", "confidence": "74%", "bull": "Inflation hedge, central bank buying", "bear": "Fed tightening risk", "verdict": "Buy dips", "action": "Add"},
+    {"asset": "Bitcoin (BTC/USD)", "signal": "🟢 Strong Buy", "confidence": "82%", "bull": "ETF inflows, whale accumulation", "bear": "SEC regulation risk", "verdict": "Accumulate", "action": "10% weight"},
+    {"asset": "Ethereum (ETH/USD)", "signal": "🟡 Neutral", "confidence": "55%", "bull": "DeFi activity stable", "bear": "Gas fees + SEC risk", "verdict": "Hold", "action": "Wait"},
+    {"asset": "Altcoins (SOL, ADA)", "signal": "🔴 Avoid", "confidence": "68%", "bull": "Low liquidity, hype cycles", "bear": "Pump/dump risk", "verdict": "Avoid", "action": "Exit"}
+  ]
+}
 
