@@ -1,713 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPRZonesPulse – Project Status v2</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <style>
-        /* ============================================================
-           LEGENDPULSE-STYLE DARK THEME (Glassy + Glows)
-           ============================================================ */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            background: radial-gradient(circle at 10% 20%, #0b0f1c, #05070e);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
-        }
-        /* Glowing orbs */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -30%;
-            left: -10%;
-            width: 60%;
-            height: 80%;
-            background: radial-gradient(circle, rgba(0, 255, 255, 0.08), transparent 70%);
-            filter: blur(80px);
-            z-index: 0;
-        }
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -20%;
-            right: -10%;
-            width: 50%;
-            height: 70%;
-            background: radial-gradient(circle, rgba(200, 0, 255, 0.08), transparent 70%);
-            filter: blur(80px);
-            z-index: 0;
-        }
-
-        .dashboard {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 1350px;
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 48px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-            padding: 30px 35px 40px 35px;
-        }
-
-        /* ---------- NAVBAR ---------- */
-        .navbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 18px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logo-icon {
-            width: 42px;
-            height: 42px;
-            background: linear-gradient(135deg, #00f0ff, #a855f7);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-            color: #fff;
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
-        }
-        .logo-text {
-            color: #fff;
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-        .logo-text span {
-            color: #a855f7;
-        }
-
-        /* Tabs */
-        .menu {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .menu a {
-            color: rgba(255, 255, 255, 0.5);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            padding: 8px 16px;
-            border-radius: 40px;
-            transition: all 0.3s ease;
-            border: 1px solid transparent;
-        }
-        .menu a i {
-            margin-right: 8px;
-        }
-        .menu a:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .menu a.active {
-            color: #fff;
-            background: rgba(168, 85, 247, 0.15);
-            border: 1px solid rgba(168, 85, 247, 0.2);
-            box-shadow: 0 0 15px rgba(168, 85, 247, 0.05);
-        }
-        .menu a.upgrade {
-            background: linear-gradient(135deg, #a855f7, #7c3aed);
-            color: #fff;
-            border: none;
-            padding: 8px 20px;
-        }
-
-        /* ---------- STATUS BAR ---------- */
-        .status-bar {
-            display: flex;
-            gap: 28px;
-            background: rgba(255, 255, 255, 0.02);
-            padding: 8px 18px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            margin-bottom: 28px;
-            font-size: 13px;
-            font-weight: 600;
-            flex-wrap: wrap;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        .status-bar .badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .status-bar .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .dot.green { background: #00c897; }
-        .dot.purple { background: #a855f7; }
-
-        /* ---------- TICKER STRIP ---------- */
-        .ticker-strip {
-            display: flex;
-            gap: 32px;
-            background: rgba(255, 255, 255, 0.02);
-            padding: 10px 24px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            margin-bottom: 28px;
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        .ticker-item {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-            font-size: 13px;
-        }
-        .ticker-item .symbol { color: rgba(255, 255, 255, 0.4); font-weight: 600; }
-        .ticker-item .price { color: #fff; font-weight: 700; }
-        .ticker-item .change { font-weight: 600; padding: 2px 10px; border-radius: 4px; font-size: 12px; }
-        .ticker-item .change.green { color: #00c897; background: rgba(0, 200, 151, 0.15); }
-        .ticker-item .change.red { color: #ff6b6b; background: rgba(255, 107, 107, 0.15); }
-
-        /* ---------- SCANNER SECTION (NEW) ---------- */
-        .scanner-section {
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 28px;
-            padding: 24px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-        .scanner-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .scanner-header h2 {
-            color: #fff;
-            font-size: 20px;
-            font-weight: 700;
-        }
-        .scanner-header h2 i {
-            color: #a855f7;
-            margin-right: 12px;
-        }
-        .scanner-badge {
-            background: rgba(0, 200, 151, 0.15);
-            color: #00c897;
-            padding: 4px 16px;
-            border-radius: 40px;
-            font-size: 12px;
-            font-weight: 600;
-            border: 1px solid rgba(0, 200, 151, 0.2);
-        }
-
-        /* Glassy Table */
-        .scanner-table-wrap {
-            overflow-x: auto;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-        .scanner-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-            min-width: 600px;
-        }
-        .scanner-table thead {
-            background: rgba(255, 255, 255, 0.03);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .scanner-table th {
-            text-align: left;
-            padding: 14px 16px;
-            color: rgba(255, 255, 255, 0.4);
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .scanner-table td {
-            padding: 14px 16px;
-            color: rgba(255, 255, 255, 0.8);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
-        .scanner-table tr:last-child td {
-            border-bottom: none;
-        }
-        .scanner-table tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .signal-true {
-            color: #00c897;
-            font-weight: 700;
-        }
-        .signal-false {
-            color: rgba(255, 255, 255, 0.2);
-        }
-        .funda-strong {
-            color: #a855f7;
-            font-weight: 600;
-        }
-        .funda-weak {
-            color: rgba(255, 255, 255, 0.2);
-        }
-        .buy-badge {
-            background: rgba(0, 200, 151, 0.2);
-            color: #00c897;
-            padding: 2px 12px;
-            border-radius: 40px;
-            font-size: 12px;
-            font-weight: 700;
-            border: 1px solid rgba(0, 200, 151, 0.3);
-        }
-        .no-signal-msg {
-            color: rgba(255, 255, 255, 0.3);
-            text-align: center;
-            padding: 30px;
-            font-size: 15px;
-        }
-
-        /* ---------- PROJECT CARDS GRID ---------- */
-        .project-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            margin-bottom: 28px;
-        }
-        .project-card {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(10px);
-            border-radius: 28px;
-            padding: 28px 24px 24px 24px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-        }
-        .project-card:hover {
-            transform: translateY(-6px);
-            border-color: rgba(168, 85, 247, 0.2);
-            background: rgba(255, 255, 255, 0.04);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 18px;
-        }
-        .card-title {
-            color: #fff;
-            font-size: 17px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .card-title i { color: #a855f7; font-size: 20px; }
-        .status-badge {
-            padding: 5px 14px;
-            border-radius: 40px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            background: rgba(255, 255, 255, 0.05);
-            color: #aaa;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            white-space: nowrap;
-        }
-        .status-badge.online { background: rgba(0, 255, 170, 0.12); color: #00ffaa; border-color: rgba(0, 255, 170, 0.2); box-shadow: 0 0 20px rgba(0, 255, 170, 0.05); }
-        .status-badge.offline { background: rgba(255, 70, 70, 0.12); color: #ff5555; border-color: rgba(255, 70, 70, 0.2); }
-        .status-badge.warning { background: rgba(255, 200, 0, 0.12); color: #ffcc00; border-color: rgba(255, 200, 0, 0.2); }
-        .card-message { color: #fff; font-size: 15px; font-weight: 500; margin-bottom: 10px; }
-        .card-details {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
-            line-height: 1.7;
-            border-top: 1px solid rgba(255, 255, 255, 0.03);
-            padding-top: 16px;
-        }
-        .card-details i { width: 20px; color: rgba(255, 255, 255, 0.2); margin-right: 8px; }
-
-        /* ---------- REFRESH AREA ---------- */
-        .refresh-area {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            padding-top: 24px;
-            margin-top: 4px;
-            flex-wrap: wrap;
-        }
-        .timestamp { color: rgba(255, 255, 255, 0.25); font-size: 13px; }
-        .refresh-btn {
-            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(0, 240, 255, 0.05));
-            border: 1px solid rgba(168, 85, 247, 0.2);
-            color: #fff;
-            padding: 12px 32px;
-            border-radius: 60px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .refresh-btn:hover {
-            background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(0, 240, 255, 0.1));
-            border-color: #a855f7;
-            box-shadow: 0 0 30px rgba(168, 85, 247, 0.15);
-            transform: scale(1.02);
-        }
-        @media (max-width: 768px) {
-            .dashboard { padding: 20px; border-radius: 28px; }
-            .navbar { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .menu { justify-content: flex-start; width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
-            .menu a { font-size: 12px; padding: 6px 12px; white-space: nowrap; }
-            .project-grid { grid-template-columns: 1fr; }
-            .status-bar { gap: 14px; font-size: 12px; }
-            .ticker-strip { gap: 18px; font-size: 12px; }
-            .refresh-area { justify-content: center; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Enhanced Market Sentiment Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="dashboard">
+  <h1>SPRZones Market Sentiment Dashboard</h1>
+  <p>Last Updated: <span id="update-time"></span></p>
 
-        <!-- NAVBAR -->
-        <nav class="navbar">
-            <div class="logo">
-                <div class="logo-icon"><i class="fas fa-cubes"></i></div>
-                <div class="logo-text">SPRZones<span>Pulse</span></div>
-            </div>
-            <div class="menu">
-                <a href="#" class="active"><i class="fas fa-home"></i> Home</a>
-                <a href="#"><i class="fas fa-chart-line"></i> Dashboard</a>
-                <a href="#"><i class="fas fa-code-branch"></i> Crypto & Forex</a>
-                <a href="#"><i class="fas fa-chart-bar"></i> Stocks</a>
-                <a href="#"><i class="fas fa-history"></i> History</a>
-                <a href="#" class="upgrade"><i class="fas fa-rocket"></i> Upgrade</a>
-            </div>
-        </nav>
+  <!-- Macro Economics Panel -->
+  <section>
+    <h2>Macro Economics</h2>
+    <ul>
+      <li>US 10-Year Yield: <span id="us-yield"></span></li>
+      <li>DXY (Dollar Index): <span id="dxy"></span></li>
+      <li>Brent Crude Oil: <span id="crude"></span></li>
+      <li>FII/DII Flows (India): <span id="fii-dii"></span></li>
+      <li>Fear & Greed Index (Crypto): <span id="fear-greed"></span></li>
+    </ul>
+  </section>
 
-        <!-- STATUS BAR -->
-        <div class="status-bar">
-            <span class="badge"><span class="dot green"></span> AI Active</span>
-            <span class="badge"><span class="dot green"></span> Market Live</span>
-            <span class="badge">📊 <span style="color:#a855f7;">95%+</span> Accuracy</span>
-            <span class="badge">📈 <span style="color:#00c897;">20</span> Total Analyses</span>
-            <span class="badge">🏆 <span style="color:#ffc107;">93.9%</span> Success Rate</span>
-        </div>
+  <!-- News Sentiment Heatmap -->
+  <section>
+    <h2>News Sentiment Heatmap</h2>
+    <table>
+      <thead>
+        <tr><th>Source</th><th>Headline</th><th>Sentiment</th></tr>
+      </thead>
+      <tbody id="news-table"></tbody>
+    </table>
+  </section>
 
-        <!-- TICKER STRIP -->
-        <div class="ticker-strip">
-            <div class="ticker-item"><span class="symbol">S&P 500</span><span class="price">7,500.58</span><span class="change green">+1.44%</span></div>
-            <div class="ticker-item"><span class="symbol">NASDAQ</span><span class="price">26,517.93</span><span class="change green">+2.74%</span></div>
-            <div class="ticker-item"><span class="symbol">NIFTY 50</span><span class="price">22,550.40</span><span class="change red">-0.50%</span></div>
-            <div class="ticker-item"><span class="symbol">BTC/USD</span><span class="price">67,890</span><span class="change green">+2.40%</span></div>
-            <div class="ticker-item"><span class="symbol">XAUUSD</span><span class="price">2,350.00</span><span class="change green">+0.80%</span></div>
-            <div class="ticker-item"><span class="symbol">EUR/USD</span><span class="price">1.0850</span><span class="change red">-0.20%</span></div>
-        </div>
+  <!-- Social Media Tracker -->
+  <section>
+    <h2>Social Media Sentiment</h2>
+    <p>Twitter/X Mentions: <span id="twitter"></span></p>
+    <p>Reddit Sentiment: <span id="reddit"></span></p>
+  </section>
 
-        <!-- ========================================================= -->
-        <!-- 🚀 NEW: 200 EMA BREAKOUT SCANNER SECTION -->
-        <!-- ========================================================= -->
-        <div class="scanner-section" id="scannerSection">
-            <div class="scanner-header">
-                <h2><i class="fas fa-bolt"></i> 200 EMA Breakout Scanner (1H / 4H / Daily)</h2>
-                <span class="scanner-badge"><i class="fas fa-rotate-right"></i> Live Signals</span>
-            </div>
-            <div id="scannerContent">
-                <div class="no-signal-msg">
-                    <i class="fas fa-spinner fa-spin"></i> Loading scanner data...
-                </div>
-            </div>
-        </div>
+  <!-- On-Chain Analytics -->
+  <section>
+    <h2>On-Chain Analytics (Crypto)</h2>
+    <ul>
+      <li>Whale Inflows: <span id="whale-inflows"></span></li>
+      <li>Stablecoin Activity: <span id="stablecoin"></span></li>
+      <li>Exchange Reserves: <span id="exchange-reserves"></span></li>
+    </ul>
+  </section>
 
-        <!-- PROJECT CARDS -->
-        <div class="project-grid" id="projectGrid">
-            <div style="grid-column:1/-1; text-align:center; color:rgba(255,255,255,0.5); padding:40px;">
-                <i class="fas fa-spinner fa-spin"></i> Loading status...
-            </div>
-        </div>
+  <!-- ETF & Fund Flows -->
+  <section>
+    <h2>ETF & Fund Flows</h2>
+    <ul>
+      <li>Gold ETF Flows: <span id="gold-etf"></span></li>
+      <li>Bitcoin ETF Flows: <span id="btc-etf"></span></li>
+    </ul>
+  </section>
 
-        <!-- REFRESH AREA -->
-        <div class="refresh-area">
-            <span class="timestamp" id="lastUpdated"><i class="far fa-clock"></i> Last updated: Just now</span>
-            <button class="refresh-btn" onclick="refreshAll()"><i class="fas fa-sync-alt"></i> Refresh Status</button>
-        </div>
-    </div>
+  <!-- Risks & Considerations -->
+  <section>
+    <h2>Risks & Considerations</h2>
+    <ul>
+      <li>Gold: Fed hawkish stance, USD rally, geopolitical shocks</li>
+      <li>Crypto: Regulatory bans, liquidity shocks, hype cycles</li>
+      <li>Stocks: Midcap bubble risk, earnings miss</li>
+    </ul>
+  </section>
 
-    <script>
-        // ============================================================
-        // 🔥 CONFIG: APNI REPO DETAILS YAHAN DAALO
-        // ============================================================
-        const PROJECTS = [
-            { 
-                id: 1, 
-                name: 'Shariah Screener', 
-                icon: 'fa-shield-halved',
-                repo: 'sprzonesbot/shariah-technical-screener'
-            },
-            { 
-                id: 2, 
-                name: 'PEAD Earnings Agent', 
-                icon: 'fa-bullhorn',
-                repo: 'sprzonesbot/pead-earnings-agent'
-            },
-            { 
-                id: 3, 
-                name: 'Market Alert Bot', 
-                icon: 'fa-bell',
-                repo: 'sprzonesbot/Market-Alert-Bot'
-            }
-        ];
+  <!-- Actionable Monitoring Routine -->
+  <section>
+    <h2>Actionable Monitoring Routine</h2>
+    <ul>
+      <li>Daily: Kitco + TradingView + CoinDesk headlines</li>
+      <li>Weekly: Bloomberg/Reuters macro + Glassnode/CryptoQuant reports</li>
+      <li>Monthly: World Gold Council + Messari/Binance Research</li>
+      <li>Sentiment Check: Fear & Greed Index + ETF flows + Whale alerts</li>
+    </ul>
+  </section>
 
-        // 🔥 JSON file ka RAW URL (yahi se scanner data fetch karega)
-        const SCANNER_JSON_URL = 'https://raw.githubusercontent.com/sprzonesbot/SPRZones-dashboard/main/data/signals.json';
+  <!-- Confluence Factors -->
+  <section>
+    <h2>Confluence Factors</h2>
+    <table>
+      <thead>
+        <tr><th>Asset</th><th>Signal</th><th>Confidence</th><th>Bull Catalyst</th><th>Bear Risk</th><th>Verdict</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Gold (XAU/USD)</td><td>🟢 Accumulate</td><td>74%</td><td>Inflation hedge, central bank buying</td><td>Fed tightening risk</td><td>Buy dips</td><td>Add</td></tr>
+        <tr><td>Bitcoin (BTC/USD)</td><td>🟢 Strong Buy</td><td>82%</td><td>ETF inflows, whale accumulation</td><td>SEC regulation risk</td><td>Accumulate</td><td>10% weight</td></tr>
+        <tr><td>Ethereum (ETH/USD)</td><td>🟡 Neutral</td><td>55%</td><td>DeFi activity stable</td><td>Gas fees + SEC risk</td><td>Hold</td><td>Wait</td></tr>
+        <tr><td>Altcoins (SOL, ADA)</td><td>🔴 Avoid</td><td>68% (Sell)</td><td>Low liquidity, hype cycles</td><td>Pump/dump risk</td><td>Avoid</td><td>Exit</td></tr>
+      </tbody>
+    </table>
+  </section>
 
-        const GITHUB_TOKEN = ''; // Private repo hai toh token daalo, nahi toh khali chhodo
-
-        // ============================================================
-        // FUNCTION: Load Scanner Data from JSON
-        // ============================================================
-        async function loadScannerData() {
-            const container = document.getElementById('scannerContent');
-            
-            try {
-                const response = await fetch(SCANNER_JSON_URL + '?v=' + new Date().getTime());
-                
-                if (!response.ok) {
-                    // Agar file exist nahi karti (404) toh error nahi dikhana, bas empty state
-                    if (response.status === 404) {
-                        container.innerHTML = `
-                            <div class="no-signal-msg">
-                                <i class="fas fa-inbox"></i> No signals found today. <br>
-                                <span style="font-size:13px; color:rgba(255,255,255,0.2);">Scanner runs automatically at 4:00 PM IST.</span>
-                            </div>
-                        `;
-                        return;
-                    }
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="no-signal-msg">
-                            <i class="fas fa-check-circle" style="color:#00c897;"></i> No strong buy signals today.
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Sirf Final_Buy = True wale dikhao (ya chahe toh saare dikhao, filter hatao agar sab dikhane ho)
-                const filtered = data.filter(row => row.Final_Buy === true);
-                
-                if (filtered.length === 0) {
-                    container.innerHTML = `
-                        <div class="no-signal-msg">
-                            <i class="fas fa-check-circle" style="color:#00c897;"></i> No strong buy signals today.
-                            <br><span style="font-size:13px; color:rgba(255,255,255,0.2);">${data.length} stocks scanned, none met all criteria.</span>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Table banayein
-                let html = `
-                    <div class="scanner-table-wrap">
-                        <table class="scanner-table">
-                            <thead>
-                                <tr>
-                                    <th>Stock</th>
-                                    <th>1H Signal</th>
-                                    <th>4H Signal</th>
-                                    <th>Daily Signal</th>
-                                    <th>Fundamentals</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                filtered.forEach(row => {
-                    const ticker = row.Ticker || 'N/A';
-                    const name = row.Name || ticker;
-                    const sig1h = row['1H_Signal'] === true;
-                    const sig4h = row['4H_Signal'] === true;
-                    const sigD = row['Daily_Signal'] === true;
-                    const funda = row.Fundamentals === true;
-
-                    html += `
-                        <tr>
-                            <td><strong style="color:#fff;">${ticker}</strong><br><span style="font-size:11px; color:rgba(255,255,255,0.3);">${name}</span></td>
-                            <td class="${sig1h ? 'signal-true' : 'signal-false'}">${sig1h ? '✅ Yes' : '❌ No'}</td>
-                            <td class="${sig4h ? 'signal-true' : 'signal-false'}">${sig4h ? '✅ Yes' : '❌ No'}</td>
-                            <td class="${sigD ? 'signal-true' : 'signal-false'}">${sigD ? '✅ Yes' : '❌ No'}</td>
-                            <td class="${funda ? 'funda-strong' : 'funda-weak'}">${funda ? '💪 Strong' : '😐 Weak'}</td>
-                            <td><span class="buy-badge"><i class="fas fa-arrow-up"></i> BUY</span></td>
-                        </tr>
-                    `;
-                });
-
-                html += `</tbody></table></div>`;
-                html += `<div style="margin-top:12px; color:rgba(255,255,255,0.2); font-size:12px; text-align:right;">Showing ${filtered.length} buy signals out of ${data.length} scanned.</div>`;
-                container.innerHTML = html;
-
-            } catch (error) {
-                console.error('Scanner load error:', error);
-                container.innerHTML = `
-                    <div class="no-signal-msg">
-                        <i class="fas fa-triangle-exclamation" style="color:#ffcc00;"></i> Could not load scanner data. <br>
-                        <span style="font-size:13px; color:rgba(255,255,255,0.2);">Make sure 'dashboard/data/signals.json' exists in the repo.</span>
-                    </div>
-                `;
-            }
-        }
-
-        // ============================================================
-        // FUNCTION: Check GitHub Repo Status (Existing Logic)
-        // ============================================================
-        async function checkAllStatus() {
-            const grid = document.getElementById('projectGrid');
-            grid.innerHTML = `
-                <div style="grid-column:1/-1; text-align:center; color:rgba(255,255,255,0.5); padding:40px;">
-                    <i class="fas fa-spinner fa-spin"></i> Checking GitHub repositories...
-                </div>
-            `;
-
-            const promises = PROJECTS.map(async (project) => {
-                let status = 'offline';
-                let message = 'Repo not found';
-                let detail = '';
-
-                try {
-                    if (project.repo && project.repo.includes('/')) {
-                        const apiUrl = `https://api.github.com/repos/${project.repo}`;
-                        const headers = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-                        const res = await fetch(apiUrl, { headers });
-
-                        if (res.ok) {
-                            const data = await res.json();
-                            const lastPush = new Date(data.pushed_at);
-                            const now = new Date();
-                            const diffHours = (now - lastPush) / (1000 * 60 * 60);
-
-                            if (diffHours < 24) {
-                                status = 'online';
-                                message = `✅ Active (${Math.round(diffHours)} hours ago)`;
-                            } else if (diffHours < 168) {
-                                status = 'warning';
-                                message = `⚠️ Stale (${Math.round(diffHours / 24)} days ago)`;
-                            } else {
-                                status = 'offline';
-                                message = `❌ Inactive (${Math.round(diffHours / 24)} days old)`;
-                            }
-                            detail = `Last commit: ${lastPush.toLocaleString()}`;
-                        } else if (res.status === 404) {
-                            status = 'offline';
-                            message = '❌ Repo not found';
-                        } else {
-                            status = 'offline';
-                            message = `❌ API Error (${res.status})`;
-                        }
-                    } else {
-                        status = 'warning';
-                        message = '⚠️ No repo specified';
-                    }
-                } catch (error) {
-                    status = 'offline';
-                    message = '❌ Network / CORS error';
-                }
-
-                if (!detail) detail = new Date().toLocaleTimeString();
-                return { ...project, status, message, detail };
-            });
-
-            const results = await Promise.all(promises);
-            renderCards(results);
-            document.getElementById('lastUpdated').innerHTML =
-                `<i class="far fa-clock"></i> Last updated: ${new Date().toLocaleString()}`;
-        }
-
-        function renderCards(projects) {
-            const grid = document.getElementById('projectGrid');
-            grid.innerHTML = '';
-
-            projects.forEach(p => {
-                const card = document.createElement('div');
-                card.className = 'project-card';
-
-                const statusClass = p.status === 'online' ? 'online' : (p.status === 'warning' ? 'warning' : 'offline');
-                const statusIcon = p.status === 'online' ? 'fa-circle-check' :
-                                  (p.status === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-xmark');
-
-                card.innerHTML = `
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas ${p.icon}"></i> ${p.name}
-                        </div>
-                        <span class="status-badge ${statusClass}">
-                            <i class="fas ${statusIcon}"></i>
-                            ${p.status === 'online' ? 'Online' : (p.status === 'warning' ? 'Warning' : 'Offline')}
-                        </span>
-                    </div>
-                    <div class="card-message">${p.message}</div>
-                    <div class="card-details">
-                        <div><i class="fas fa-code-fork"></i> Status: ${p.status.toUpperCase()}</div>
-                        <div><i class="fas fa-clock"></i> ${p.detail || 'N/A'}</div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
-        // ============================================================
-        // REFRESH ALL
-        // ============================================================
-        async function refreshAll() {
-            await loadScannerData();
-            await checkAllStatus();
-        }
-
-        // ============================================================
-        // AUTO-LOAD
-        // ============================================================
-        window.onload = function() {
-            loadScannerData();
-            checkAllStatus();
-            setInterval(refreshAll, 120000); // Har 2 minute refresh
-        };
-    </script>
+  <script src="app.js"></script>
 </body>
 </html>
