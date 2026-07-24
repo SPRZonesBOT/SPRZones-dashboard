@@ -24,3 +24,7 @@ th, td {
 th {
   background: #1a1a1a;
 }
+
+canvas {
+  margin-top: 20px;
+}
