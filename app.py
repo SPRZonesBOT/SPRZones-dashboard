@@ -2,22 +2,24 @@ import os
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. Streamlit Page Configuration
+# 1. Page Configuration
 st.set_page_config(
-    page_title="SPRZones - Institutional Intelligence",
-    page_icon="📊",
+    page_title="SPRZones - Institutional Intelligence Terminal",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. Sidebar Navigation
+# 2. Sidebar Setup
 st.sidebar.title("🤖 SPRZones Terminal")
+st.sidebar.caption("Multi-Agent Quantitative Strategy Desk")
+
 view_option = st.sidebar.radio(
-    "Select View",
-    ["Institutional Report", "Live Trading Signals", "Agent Settings"]
+    "Navigation",
+    ["🌐 Institutional Strategy Report", "⚡ Trading Signals Desk", "⚙️ System Configuration"]
 )
 
-# 3. Render HTML Report Function
+# 3. HTML Report Renderer
 def load_weekly_report():
     file_path = os.path.join("dashboard", "weekly_report.html")
     
@@ -25,20 +27,23 @@ def load_weekly_report():
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # Render HTML with scrolling and proper height
+        # Render HTML component inside Streamlit Iframe
         components.html(html_content, height=1400, scrolling=True)
     else:
-        st.error(f"⚠️ Report File Not Found at `{file_path}`! Please check your file directory.")
+        st.error(f"⚠️ Report File missing at `{file_path}`. Please ensure 'weekly_report.html' is inside the 'dashboard/' folder.")
 
 # 4. Routing Logic
-if view_option == "Institutional Report":
-    st.markdown("### 🏛️ Institutional Weekly Market Strategy")
+if view_option == "🌐 Institutional Strategy Report":
     load_weekly_report()
 
-elif view_option == "Live Trading Signals":
-    st.markdown("### ⚡ Live Trading & Signals Desk")
-    st.info("Signals data updating via GitHub Actions...")
+elif view_option == "⚡ Trading Signals Desk":
+    st.title("⚡ Quantitative Trading Signals Desk")
+    st.info("System connected to live signal pipeline (`data/signals.json`).")
 
-elif view_option == "Agent Settings":
-    st.markdown("### ⚙️ Multi-Agent Configuration")
-    st.json({"status": "Active", "agents": ["Transformer_Moderator", "Quant_Risk_Agent"]})
+elif view_option == "⚙️ System Configuration":
+    st.title("⚙️ Multi-Agent Settings")
+    st.json({
+        "status": "Active",
+        "agents": ["Macro_Global_Agent", "Quant_Risk_Agent", "Moderator_Transformer"],
+        "pipeline": "GitHub Actions Auto-Update"
+    })
